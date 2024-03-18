@@ -1,0 +1,2 @@
+add_executable(TestSimulation test_simulation.cpp)
+target_link_libraries(TestSimulation PUBLIC PM_Simulation Catch2 Catch2::Catch2WithMain)
