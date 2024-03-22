@@ -50,8 +50,9 @@ private:
 class Simulation {
 public:
     // 构造函数
-    Simulation(double time_max, double delta_t, double box_width, double expansion_factor)
-        : time_max_(time_max), delta_t_(delta_t), box_width_(box_width), expansion_factor_(expansion_factor) {}
+    Simulation(double time_max, double delta_t, double box_width, double expansion_factor, int nc)
+        : time_max_(time_max), delta_t_(delta_t), box_width_(box_width), expansion_factor_(expansion_factor, nc_(nc)) {}
+
 
     // 添加单个粒子到自定义位置的方法
     void addParticle(const std::array<double, 3>& position) {
@@ -87,4 +88,5 @@ private:
     double delta_t_; // 时间步长
     double box_width_; // 盒子宽度
     double expansion_factor_; // 扩展因子
+    int nc; //number of cells wide
 };
