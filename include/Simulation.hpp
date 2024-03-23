@@ -18,6 +18,7 @@
 #include <vector>
 #include <array>
 #include <random>
+#include <cmath>
 
 // 粒子类定义
 class Particle {
@@ -50,8 +51,8 @@ private:
 class Simulation {
 public:
     // 构造函数
-    Simulation(double time_max, double delta_t, double box_width, double expansion_factor, int nc)
-        : time_max_(time_max), delta_t_(delta_t), box_width_(box_width), expansion_factor_(expansion_factor, nc_(nc)) {}
+    Simulation(double time_max, double delta_t, double box_width, double expansion_factor, int nc, double particle_mass)
+        : time_max_(time_max), delta_t_(delta_t), box_width_(box_width), expansion_factor_(expansion_factor, nc_(nc), particle_mass_(particle_mass)) {}
 
 
     // 添加单个粒子到自定义位置的方法
@@ -82,11 +83,54 @@ public:
         }
     }
 
+    fftw_complex* density_buffer_;
+
+    // 初始化密度缓冲区的函数
+    void initializeDensityBuffer() {
+        int n_total_cells = nc_ * nc_ * nc_;
+        density_buffer_ = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * n_total_cells);
+        for (int i = 0; i < n_total_cells; ++i) {
+            density_buffer_[i][0] = 0.0; // 实部设为0
+            density_buffer_[i][1] = 0.0; // 虚部设为0（因为密度是实函数）
+        }
+    }
+
+    // 计算密度函数的函数
+    void calculateDensity() {
+        double cell_width = box_width_ / nc_; // 网格单元的宽度
+        double cell_volume = std::pow(cell_width, 3);  // 网格单元的体积
+
+        // 清除之前的密度值
+        int n_total_cells = nc_ * nc_ * nc_;
+        for (int i = 0; i < n_total_cells; ++i) {
+            density_buffer_[i][0] = 0.0; // 只需要清理实部
+        }
+
+        // 对每个粒子进行循环，更新它们在密度缓冲区中的贡献
+        for (const auto& particle : particles_) {
+            std::array<double, 3> position = particle.getPosition();
+            int i = static_cast<int>(position[0] * nc_);
+            int j = static_cast<int>(position[1] * nc_);
+            int k = static_cast<int>(position[2] * nc_);
+            int index = k + nc_ * (j + nc_ * i);
+            density_buffer_[index][0] += particle_mass_ / cell_volume; // 更新密度值
+        }
+    }
+
+    // 析构函数来释放密度缓冲区
+    ~Simulation() {
+        if (density_buffer_ != nullptr) {
+            fftw_free(density_buffer_);
+        }
+    }
+
+
 private:
     std::vector<Particle> particles_; // 粒子数组
     double time_max_; // 模拟的最大时间
     double delta_t_; // 时间步长
     double box_width_; // 盒子宽度
     double expansion_factor_; // 扩展因子
-    int nc; //number of cells wide
+    int nc_; //number of cells wide
+    double particle_mass_; //粒子质量
 };
