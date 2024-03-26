@@ -1,17 +1,11 @@
+// Simulation.cpp
 #include "Simulation.hpp"
 #include "Utils.hpp"
-
-// void Simulation::run()
-// {
-
-// }
-
 #include <fftw3.h>
 #include <vector>
 #include <array>
 #include <random>
 #include <cmath>
-#include "Simulation.hpp"
 #include <algorithm>
 
 // Particle 类的实现
@@ -143,7 +137,7 @@ void Simulation::calculatePotential() {
     fftw_destroy_plan(inverse_plan);
 
     // 应用归一化因子，以确保逆FFT后的结果正确
-    double norm_factor = 1.0 / (nc_ * nc_ * nc_);
+    double norm_factor = 1.0 / 8 * (nc_ * nc_ * nc_);
     for (int i = 0; i < nc_ * nc_ * nc_; ++i) {
         density_buffer_[i][0] *= norm_factor;
         // 对于势能，我们只关心实部
@@ -166,3 +160,22 @@ double Simulation::getPotentialAtGridIndex(int i, int j, int k) {
     return density_buffer_[index][0]; // 我们只关心实部
 }
 
+std::vector<std::array<double, 3>> Simulation::calculateGradient(const fftw_complex* potential) {
+    std::vector<std::array<double, 3>> gradient(nc_ * nc_ * nc_);
+    
+    for (int i = 0; i < nc_; ++i) {
+        for (int j = 0; j < nc_; ++j) {
+            for (int k = 0; k < nc_; ++k) {
+                int index = (k + nc_ * (j + nc_ * i));
+                gradient[index][0] = -(potential[wrapIndex(i+1, nc_) * nc_ * nc_ + j * nc_ + k][0] - potential[wrapIndex(i-1, nc_) * nc_ * nc_ + j * nc_ + k][0]) / (2 * box_width_ / nc_);
+                gradient[index][1] = -(potential[i * nc_ * nc_ + wrapIndex(j+1, nc_) * nc_ + k][0] - potential[i * nc_ * nc_ + wrapIndex(j-1, nc_) * nc_ + k][0]) / (2 * box_width_ / nc_);
+                gradient[index][2] = -(potential[i * nc_ * nc_ + j * nc_ + wrapIndex(k+1, nc_)][0] - potential[i * nc_ * nc_ + j * nc_ + wrapIndex(k-1, nc_)][0]) / (2 * box_width_ / nc_);
+            }
+        }
+    }
+    return gradient;
+}
+
+int Simulation::wrapIndex(int index, int max) {
+    return (index + max) % max; // 模运算
+}

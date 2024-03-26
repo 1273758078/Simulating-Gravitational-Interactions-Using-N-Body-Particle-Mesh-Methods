@@ -1,22 +1,8 @@
+// Simulation.hpp
 #pragma once
-
 #include <fftw3.h>
-
-// class Simulation
-// {
-// public:
-
-//     /**
-//      * @brief Run a particle mesh simulation from t=0 to t_max
-//      * 
-//      */
-//     void run();
-
-// };
-
 #ifndef SIMULATION_HPP
 #define SIMULATION_HPP
-
 #include <vector>
 #include <array>
 #include <cmath>
@@ -49,6 +35,8 @@ public:
     void calculatePotential();
     // 获取给定网格索引(i, j, k)处的势能
     double getPotentialAtGridIndex(int i, int j, int k);
+    // 梯度计算函数
+    std::vector<std::array<double, 3>> calculateGradient(const fftw_complex* potential);
 
 private:
     std::array<double, 3> getKVector(int i, int j, int k);
@@ -61,6 +49,7 @@ private:
     double particle_mass_;             // 粒子质量
     fftw_complex* density_buffer_;     // 密度缓冲区
     fftw_complex* potential_buffer_;   // 势能缓冲区
+    int wrapIndex(int index, int max);
 };
 
 #endif // SIMULATION_HPP

@@ -147,3 +147,62 @@ TEST_CASE("Density with multiple particles", "[density]") {
 }
 
 // ... 其他测试案例 ...
+
+//////////////////////////////////////////// Test 1.6
+// 假设这是一个测试文件，例如test_gradient.cpp
+#include "catch.hpp"
+#include "Simulation.hpp"
+
+TEST_CASE("Gradient of potential is calculated correctly", "[Simulation]") {
+    // 初始化测试用的Simulation对象和势能缓冲区
+    int nc = 10;
+    double box_width = 100.0;
+    Simulation sim(1.0, 0.1, box_width, 1.0, nc, 1.0);
+    fftw_complex* potential = new fftw_complex[nc * nc * nc]();
+    
+    // 设置一个简单的测试情况：在中心处势能非零，在其他地方为零
+    int centerIndex = (nc / 2) * nc * nc + (nc / 2) * nc + (nc / 2);
+    potential[centerIndex][0] = 100.0;  // 只设置实部
+    
+    // 计算梯度
+    auto gradient = sim.calculateGradient(potential);
+    
+    // 进行测试：中心点周围的梯度值应该是已知的
+    REQUIRE(gradient[centerIndex][0] == Approx(0.0).margin(1e-5));
+    REQUIRE(gradient[centerIndex][1] == Approx(0.0).margin(1e-5));
+    REQUIRE(gradient[centerIndex][2] == Approx(0.0).margin(1e-5));
+    
+    // 清理
+    delete[] potential;
+}
+
+TEST_CASE("Gradient calculation with periodic boundaries", "[Simulation]") {
+    // 测试边界条件的包裹
+    int nc = 10;
+    double box_width = 100.0;
+    Simulation sim(1.0, 0.1, box_width, 1.0, nc, 1.0);
+    fftw_complex* potential = new fftw_complex[nc * nc * nc]();
+    
+    // 设置潜在的线性增加势能
+    for (int i = 0; i < nc; ++i) {
+        for (int j = 0; j < nc; ++j) {
+            for (int k = 0; k < nc; ++k) {
+                int index = (k + nc * (j + nc * i));
+                potential[index][0] = static_cast<double>(i);
+            }
+        }
+    }
+    
+    // 计算梯度并检查边缘处是否正确包裹
+    auto gradient = sim.calculateGradient(potential);
+    
+    int edgeIndex = nc - 1;
+    int wrappedIndex = sim.wrapIndex(edgeIndex + 1, nc); // 应该为0
+    
+    REQUIRE(wrappedIndex == 0);
+    REQUIRE(gradient[edgeIndex][0] == Approx(-1.0).margin(1e-5));  // 边缘处梯度应该为-1
+    
+    // 清理
+    delete[] potential;
+}
+
