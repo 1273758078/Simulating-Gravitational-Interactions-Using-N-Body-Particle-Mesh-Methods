@@ -47,6 +47,8 @@ public:
     void initializeDensityBuffer();
     void calculateDensity();
     void calculatePotential();
+    // 获取给定网格索引(i, j, k)处的势能
+    double getPotentialAtGridIndex(int i, int j, int k);
 
 private:
     std::array<double, 3> getKVector(int i, int j, int k);

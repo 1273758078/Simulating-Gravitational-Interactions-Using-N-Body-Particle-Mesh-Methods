@@ -5,51 +5,42 @@
 
 using namespace Catch::Matchers;
 
-/**
- * @brief Fill out this test function by filling in the TODOs
- * Tests the calculation of the gravitational potential due to a single particle
- * Potential is examined along the x axis throught the centre of the cube
- */
-TEST_CASE("Test potential function for single particle", "Potential Tests")
-{
-    //One particle in the centre of the box with mass 0.01
-    //TODO: Set up single particle with position {0.5, 0.5, 0.5}
+TEST_CASE("Test potential function for single particle", "Potential Tests") {
+    // 一颗粒子位于盒子中心，质量为0.01
     double mass = 0.01;
-
-    // These properties should apply to your box
+    double time_max = 1.0; // 仅为初始化Simulation对象所用
+    double delta_t = 0.1;  // 同上，时间步长
     double width = 100;
+    double expansion_factor = 1.0; // 在这个测试中不会用到膨胀因子，但需要为Simulation构造函数提供
     int ncells = 101;
+    double particle_mass = 0.01; // 粒子质量
 
-    //Declare simulation with particle setup, width, and number of cells. 
-    //TODO: Simulation sim(...);
-    //TODO: calculate density
-    //TODO: calculate potential
+    // 使用初始参数声明Simulation对象
+    Simulation sim(time_max, delta_t, width, expansion_factor, ncells, particle_mass);
+    sim.addParticle({0.5, 0.5, 0.5}); // 在盒子中心添加一个粒子
+    sim.calculateDensity(); // 计算密度
+    sim.calculatePotential(); // 计算势能
 
     double w_c = width / ncells;
-    // Look at the potential function along the x axis
-    for (int i = 0; i < 101; i++)
-    {
+    // 沿x轴查看势能函数
+    for (int i = 0; i < 101; i++) {
         int j = 50;
         int k = 50;
-        if (i == 50 && j == 50 && k == 50)
-        {
-            //ignore the centre where point potential would be singular
+        if (i == 50 && j == 50 && k == 50) {
+            // 忽略中心点，因为点势能在此会是奇异的
             continue;
-        }
-        else
-        {
-            // ignore imaginary component
-            // approximate potential for multiple sources due to periodicity
+        } else {
+            double pot = sim.getPotentialAtGridIndex(i, j, k); // 获取势能
+            // 由于周期性，考虑多源势能的近似值
             double dx1 = std::abs(i - 50) * w_c;
             double dx2 = std::abs(i - 151) * w_c;
             double dx3 = std::abs(i + 51) * w_c;
-            double pot; //TODO = your potential function at indices (i,j,k)
-            double expected_pot =  -mass *(1/ dx1 + 1/dx2 + 1/dx3);
-            double diff = pot - expected_pot;
-            REQUIRE_THAT(pot, WithinRel(expected_pot, 0.3));
+            double expected_pot =  -mass * (1/dx1 + 1/dx2 + 1/dx3);
+            REQUIRE_THAT(pot, WithinRel(expected_pot, 0.3)); // 验证势能是否在预期的相对误差范围内
         }
     }
 }
+
 
 
 //////////////////////////////////////////////////////////////////
