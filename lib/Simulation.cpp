@@ -179,3 +179,19 @@ std::vector<std::array<double, 3>> Simulation::calculateGradient(const fftw_comp
 int Simulation::wrapIndex(int index, int max) {
     return (index + max) % max; // 模运算
 }
+
+void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
+    for (Particle& particle : particles_) {
+        std::array<double, 3> pos = particle.getPosition();
+        // 计算粒子位置所在的格点索引
+        int i = static_cast<int>(pos[0] * nc_);
+        int j = static_cast<int>(pos[1] * nc_);
+        int k = static_cast<int>(pos[2] * nc_);
+
+        // 获得格点上的加速度
+        std::array<double, 3> acceleration = gradients[i * nc_ * nc_ + j * nc_ + k];
+
+        // 更新粒子状态
+        particle.update(acceleration, delta_t);
+    }
+}

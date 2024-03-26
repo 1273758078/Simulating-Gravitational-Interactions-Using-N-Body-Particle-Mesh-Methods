@@ -206,3 +206,29 @@ TEST_CASE("Gradient calculation with periodic boundaries", "[Simulation]") {
     delete[] potential;
 }
 
+//////////////////////////////////////1.7
+#include "catch.hpp"
+#include "Simulation.hpp"
+#include "Particle.hpp"
+
+TEST_CASE("Particles are updated correctly", "[Simulation]") {
+    // 设置初始条件
+    Particle particle({0.5, 0.5, 0.5}, {0.0, 0.0, 0.0});
+    std::array<double, 3> acceleration = {1.0, 0.0, 0.0}; // 假设沿x轴有一个单位加速度
+    double delta_t = 1.0; // 时间步长为1秒
+
+    // 执行更新
+    particle.update(acceleration, delta_t);
+
+    // 检查结果
+    auto position = particle.getPosition();
+    auto velocity = particle.getVelocity();
+
+    REQUIRE(position[0] == Approx(0.5 + 1.0 * delta_t)); // 检查x位置是否正确更新
+    REQUIRE(velocity[0] == Approx(1.0 * delta_t)); // 检查x速度是否正确更新
+    // 由于沿y和z方向没有加速度，所以它们的位置和速度不应该改变
+    REQUIRE(position[1] == Approx(0.5));
+    REQUIRE(position[2] == Approx(0.5));
+    REQUIRE(velocity[1] == Approx(0.0));
+    REQUIRE(velocity[2] == Approx(0.0));
+}

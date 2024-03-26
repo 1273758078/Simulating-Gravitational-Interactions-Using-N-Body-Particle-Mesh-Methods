@@ -37,6 +37,8 @@ public:
     double getPotentialAtGridIndex(int i, int j, int k);
     // 梯度计算函数
     std::vector<std::array<double, 3>> calculateGradient(const fftw_complex* potential);
+    // 更新所有粒子的函数
+    void updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t);
 
 private:
     std::array<double, 3> getKVector(int i, int j, int k);
