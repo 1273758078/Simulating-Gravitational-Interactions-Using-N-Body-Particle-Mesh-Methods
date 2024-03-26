@@ -195,3 +195,20 @@ void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradi
         particle.update(acceleration, delta_t);
     }
 }
+
+void Simulation::expandBox(double expansion_factor) {
+    // 放大盒子的宽度
+    box_width_ *= expansion_factor;
+    
+    // 如果有存储单元格宽度，也需要更新它
+    cell_width_ = box_width_ / nc_;
+    
+    // 缩小所有粒子的速度
+    for (auto& particle : particles_) {
+        std::array<double, 3> velocity = particle.getVelocity();
+        velocity[0] /= expansion_factor;
+        velocity[1] /= expansion_factor;
+        velocity[2] /= expansion_factor;
+        particle.setVelocity(velocity);
+    }
+}

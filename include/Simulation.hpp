@@ -39,6 +39,8 @@ public:
     std::vector<std::array<double, 3>> calculateGradient(const fftw_complex* potential);
     // 更新所有粒子的函数
     void updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t);
+    // 新增扩展盒子的函数
+    void expandBox(double expansion_factor);
 
 private:
     std::array<double, 3> getKVector(int i, int j, int k);
@@ -52,6 +54,8 @@ private:
     fftw_complex* density_buffer_;     // 密度缓冲区
     fftw_complex* potential_buffer_;   // 势能缓冲区
     int wrapIndex(int index, int max);
+    double box_width_;  // 盒子的宽度
+    double cell_width_; // 单元格的宽度，如果有的话
 };
 
 #endif // SIMULATION_HPP
