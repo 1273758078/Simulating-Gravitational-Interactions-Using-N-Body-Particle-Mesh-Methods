@@ -72,13 +72,19 @@ void Simulation::initializeParticles(int num_particles, unsigned seed) {
 // 运行模拟
 void Simulation::run() {
     for (double t = 0; t < time_max_; t += delta_t_) {
-        for (auto& particle : particles_) {
-            std::array<double, 3> acceleration = {0, 0, 0}; // 加速度计算的占位符
-            particle.update(delta_t_, acceleration);
-        }
-        box_width_ *= expansion_factor_; // 模拟箱子的膨胀
+        // 计算密度函数
+        calculateDensity();
+        // 计算势能
+        calculatePotential();
+        // 计算势能梯度，得到加速度
+        std::vector<std::array<double, 3>> gradients = calculateGradient(potential_buffer_);
+        // 根据加速度更新粒子的位置和速度
+        updateParticles(gradients, delta_t_);
+        // 根据膨胀因子扩大盒子尺寸
+        expandBox(expansion_factor_);
     }
 }
+
 
 // 初始化密度缓冲区
 void Simulation::initializeDensityBuffer() {
