@@ -70,18 +70,21 @@ void Simulation::initializeParticles(int num_particles, unsigned seed) {
 }
 
 // 运行模拟
-void Simulation::run() {
+void Simulation::run(const std::optional<std::string>& output_folder, int save_interval) {
+    int steps = 0;
     for (double t = 0; t < time_max_; t += delta_t_) {
-        // 计算密度函数
         calculateDensity();
-        // 计算势能
         calculatePotential();
-        // 计算势能梯度，得到加速度
-        std::vector<std::array<double, 3>> gradients = calculateGradient(potential_buffer_);
-        // 根据加速度更新粒子的位置和速度
+        auto gradients = calculateGradient(potential_buffer_);
         updateParticles(gradients, delta_t_);
-        // 根据膨胀因子扩大盒子尺寸
         expandBox(expansion_factor_);
+
+        // 如果提供了输出文件夹并且当前步骤是保存间隔的倍数，则保存密度图像
+        if (output_folder && steps % save_interval == 0) {
+            std::string filename = *output_folder + "/density_" + std::to_string(steps) + ".png";
+            SaveToFile(density_buffer_, nc_, filename);
+        }
+        steps++;
     }
 }
 
