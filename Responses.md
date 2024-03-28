@@ -1,5 +1,15 @@
 1.2 Representing Particles
+To address the tasks presented in the assignment, I have implemented a Particle class that encapsulates both position and velocity as three-dimensional std::array<double, 3> objects. This choice leverages the efficiency and determinism of std::array over other containers like std::vector, which is crucial for simulations involving a large number of particles. The position and velocity are private members, ensuring encapsulation and data hiding which are best practices in object-oriented programming.
 
+The Particle constructor takes the initial position and velocity as arguments, directly initializing the class members. This follows the principle of constructors doing all necessary initializations, making objects of Particle class ready-to-use immediately after instantiation.
+
+Member functions getPosition() and getVelocity() provide a way to access the particle's state without modifying it, adhering to the principle of const-correctness. This is important for scenarios where particle properties need to be accessed without risk of altering the simulation state inadvertently.
+
+The setPosition() method allows individual manipulation of particle position, offering the flexibility to set custom distributions or for particles to be repositioned as needed by the simulation.
+
+The update() method implements the basic physics of motion, using the supplied acceleration and time step (delta_t) to update the particle's velocity and position. It directly modifies the position_ and velocity_ members, which is a straightforward and efficient approach to implementing the particle's state change.
+
+These implementations are found in Simulation.hpp and Simulation.cpp, which should be included in the project files where the Particle class is utilized. The performance expectation is met by ensuring that all operations are done in-place with minimal overhead, and ease of use is provided by clear, self-describing methods that reflect the particle's physical properties and behaviors.
 
 
 1.10 Complexity
