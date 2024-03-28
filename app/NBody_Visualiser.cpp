@@ -9,16 +9,18 @@
 
 int main(int argc, char* argv[])
 {
+    std::optional<std::string> output_folder;
+    int nc = 10, np_per_cell = 10, random_seed = 93170929;
+    double dt = 0.1, expansion_factor = 1.0, total_time = 1.0;
+    std::string output;
+
+    
     // 解析命令行参数
     if (argc == 2 && std::string(argv[1]) == "-h") {
         std::cout << "Help message and usage instructions" << std::endl;
         return 0;
     }
 
-    std::optional<std::string> output_folder;
-    int nc, np_per_cell, total_time, random_seed;
-    double dt, expansion_factor;
-    std::string output;
 
     for (int i = 1; i < argc; i += 2) {
         std::string arg(argv[i]);
@@ -27,7 +29,7 @@ int main(int argc, char* argv[])
         } else if (arg == "-np") {
             np_per_cell = std::atoi(argv[i + 1]);
         } else if (arg == "-t") {
-            total_time = std::atoi(argv[i + 1]);
+            total_time = std::atof(argv[i + 1]);
         } else if (arg == "-dt") {
             dt = std::atof(argv[i + 1]);
         } else if (arg == "-F") {
@@ -52,7 +54,7 @@ int main(int argc, char* argv[])
     sim.initializeParticles(total_particles, random_seed);
 
     // 运行模拟，并每10个时间步长保存一次密度分布图像
-    sim.run(output_folder, 10);
+    sim.run(output_folder);
 
     return 0;
 }

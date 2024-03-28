@@ -1,11 +1,13 @@
+// test_simulation.cpp
+#define CATCH_CONFIG_MAIN  // 该宏指令让Catch自动生成main函数
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 #include <cmath>
-#include "Simulation.hpp"
+#include "Simulation.hpp"  // 确保这是你的Simulation类的正确路径
 
-using namespace Catch::Matchers;
+using namespace Catch; //::Matchers
 
-TEST_CASE("Test potential function for single particle", "Potential Tests") {
+TEST_CASE("Test potential function for single particle", "[Potential Tests]") {
     // 一颗粒子位于盒子中心，质量为0.01
     double mass = 0.01;
     double time_max = 1.0; // 仅为初始化Simulation对象所用
@@ -36,18 +38,10 @@ TEST_CASE("Test potential function for single particle", "Potential Tests") {
             double dx2 = std::abs(i - 151) * w_c;
             double dx3 = std::abs(i + 51) * w_c;
             double expected_pot =  -mass * (1/dx1 + 1/dx2 + 1/dx3);
-            REQUIRE_THAT(pot, WithinRel(expected_pot, 0.3)); // 验证势能是否在预期的相对误差范围内
+            REQUIRE_THAT(pot, Matchers::WithinRel(expected_pot, 0.3)); // 验证势能是否在预期的相对误差范围内
         }
     }
 }
-
-
-
-//////////////////////////////////////////////////////////////////
-
-#define CATCH_CONFIG_MAIN  // 该宏指令会让Catch自动生成main函数
-#include "catch.hpp"
-#include "Simulation.hpp"  // 你的Simulation类的头文件
 
 TEST_CASE("Imaginary components are zero", "[density]") {
     // 设置模拟的初始参数
@@ -96,8 +90,9 @@ TEST_CASE("Density with a single particle", "[density]") {
     const int nc = 10; // 单边网格数
     const double particle_mass = 1.0; // 粒子质量
 
-    std::vector<Particle> particles = {Particle({0.5, 0.5, 0.5}, {0.0, 0.0, 0.0})};
-    Simulation sim(t_max, delta_t, box_width, expansion_factor, nc, particle_mass, particles);
+
+    Simulation sim(t_max, delta_t, box_width, expansion_factor, nc, particle_mass);
+    sim.addParticle({0.5, 0.5, 0.5});
     sim.initializeDensityBuffer();
     sim.calculateDensity();
 
@@ -120,12 +115,11 @@ TEST_CASE("Density with multiple particles", "[density]") {
     const int nc = 10; // 单边网格数
     const double particle_mass = 1.0; // 粒子质量
 
-    std::vector<Particle> particles = {
-        Particle({0.1, 0.1, 0.1}, {0.0, 0.0, 0.0}),
-        Particle({0.1, 0.1, 0.1}, {0.0, 0.0, 0.0}),  // Same cell as first particle
-        Particle({0.9, 0.9, 0.9}, {0.0, 0.0, 0.0})   // Different cell
-    };
-    Simulation sim(t_max, delta_t, box_width, expansion_factor, nc, particle_mass, particles);
+
+    Simulation sim(t_max, delta_t, box_width, expansion_factor, nc, particle_mass);
+    sim.addParticle({0.1, 0.1, 0.1});
+    sim.addParticle({0.1, 0.1, 0.1}); // Same cell as first particle
+    sim.addParticle({0.9, 0.9, 0.9}); // Different cell
     sim.initializeDensityBuffer();
     sim.calculateDensity();
 
@@ -146,12 +140,7 @@ TEST_CASE("Density with multiple particles", "[density]") {
     }
 }
 
-// ... 其他测试案例 ...
-
-//////////////////////////////////////////// Test 1.6
-// 假设这是一个测试文件，例如test_gradient.cpp
-#include "catch.hpp"
-#include "Simulation.hpp"
+// ...包含其他测试案例...
 
 TEST_CASE("Gradient of potential is calculated correctly", "[Simulation]") {
     // 初始化测试用的Simulation对象和势能缓冲区
@@ -177,7 +166,7 @@ TEST_CASE("Gradient of potential is calculated correctly", "[Simulation]") {
 }
 
 TEST_CASE("Gradient calculation with periodic boundaries", "[Simulation]") {
-    // 测试边界条件的包裹
+    // 测试边界条件
     int nc = 10;
     double box_width = 100.0;
     Simulation sim(1.0, 0.1, box_width, 1.0, nc, 1.0);
@@ -206,11 +195,6 @@ TEST_CASE("Gradient calculation with periodic boundaries", "[Simulation]") {
     delete[] potential;
 }
 
-//////////////////////////////////////1.7
-#include "catch.hpp"
-#include "Simulation.hpp"
-#include "Particle.hpp"
-
 TEST_CASE("Particles are updated correctly", "[Simulation]") {
     // 设置初始条件
     Particle particle({0.5, 0.5, 0.5}, {0.0, 0.0, 0.0});
@@ -218,7 +202,7 @@ TEST_CASE("Particles are updated correctly", "[Simulation]") {
     double delta_t = 1.0; // 时间步长为1秒
 
     // 执行更新
-    particle.update(acceleration, delta_t);
+    particle.update(delta_t, acceleration);
 
     // 检查结果
     auto position = particle.getPosition();
@@ -232,3 +216,5 @@ TEST_CASE("Particles are updated correctly", "[Simulation]") {
     REQUIRE(velocity[1] == Approx(0.0));
     REQUIRE(velocity[2] == Approx(0.0));
 }
+
+// 可以继续添加其他测试案例...
