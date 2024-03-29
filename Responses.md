@@ -31,3 +31,70 @@ Images can be found in "/workspaces/COMP0210Assignment2/Images/F1.0"
 
 ./build/bin/NBody_Visualiser -nc 101 -np 10 -t 1.5 -dt 0.01 -F 1.02 -o Images/F1.02 -s 93170929
 Images can be found in "/workspaces/COMP0210Assignment2/Images/F1.02"
+
+
+2.1 Shared Memory Parallelism
+
+1. Parallelisable Functions:
+Calculate Density: The process of calculating density involves traversing all particles and updating the density buffer, which is a parallelizable process because each particle's processing is independent.
+Calculate Potential: The calculation of potential energy involves performing a Fourier transform and applying a scaling factor to the transformed data, and this process can also be parallelized.
+Calculate Gradient: Calculating the potential energy gradient (i.e. acceleration) is achieved by calculating the spatial derivative of potential energy at each grid point, which can also be parallelized.
+UpdateParticles: Updating the position and velocity of all particles based on their acceleration is a parallelizable process.
+
+the timing of each of the functions for different numbers of threads:
+
+Benchmarking calculateDensity with 1 threads.
+Time = 0.000173007 Info: 
+
+Benchmarking calculatePotential with 1 threads.
+Time = 0.167691 Info: 
+
+Benchmarking calculateGradient with 1 threads.
+Time = 0.00343542 Info: 
+
+Benchmarking updateParticles with 1 threads.
+Time = 1.4085e-05 Info: 
+
+Benchmarking calculateDensity with 2 threads.
+Time = 0.000207253 Info: 
+
+Benchmarking calculatePotential with 2 threads.
+Time = 0.00351921 Info: 
+
+Benchmarking calculateGradient with 2 threads.
+Time = 0.00171919 Info: 
+
+Benchmarking updateParticles with 2 threads.
+Time = 1.4056e-05 Info: 
+
+Benchmarking calculateDensity with 4 threads.
+Time = 0.000244718 Info: 
+
+Benchmarking calculatePotential with 4 threads.
+Time = 0.00387202 Info: 
+
+Benchmarking calculateGradient with 4 threads.
+Time = 0.000892769 Info: 
+
+Benchmarking updateParticles with 4 threads.
+Time = 1.1765e-05 Info: 
+
+Benchmarking calculateDensity with 8 threads.
+Time = 0.00030881 Info: 
+
+Benchmarking calculatePotential with 8 threads.
+Time = 0.0039106 Info: 
+
+Benchmarking calculateGradient with 8 threads.
+Time = 0.000850439 Info: 
+
+Benchmarking updateParticles with 8 threads.
+Time = 1.4669e-05 Info:
+
+calculateDensity: Implemented with OpenMP, showing slight increases in execution time with more threads, which could indicate overhead from thread management or data access patterns.
+
+updateParticles: Very short execution times with minimal changes across different thread counts. This suggests the operation is not a major bottleneck and thus doesn't benefit much from parallelisation.
+
+For calculateDensity, the slight increase in execution time with more threads may necessitate investigating potential data contention, memory access patterns, or the overhead of managing a larger number of threads.
+
+updateParticles being extremely fast already means that parallelisation does not significantly impact overall performance, indicating that optimization efforts might be better focused elsewhere.

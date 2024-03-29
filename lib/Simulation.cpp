@@ -111,6 +111,23 @@ void Simulation::calculateDensity() {
     }
 }
 
+// OpenMP版
+// void Simulation::calculateDensity() {
+//     initializeDensityBuffer();
+//     double cell_volume = std::pow(box_width_ / nc_, 3);
+
+//     #pragma omp parallel for
+//     for (const auto& particle : particles_) {
+//         std::array<double, 3> position = particle.getPosition();
+//         int i = static_cast<int>(position[0] * nc_ / box_width_);
+//         int j = static_cast<int>(position[1] * nc_ / box_width_);
+//         int k = static_cast<int>(position[2] * nc_ / box_width_);
+//         int index = (k + nc_ * (j + nc_ * i)) % (nc_ * nc_ * nc_);
+//         density_buffer_[index][0] += particle_mass_ / cell_volume;
+//     }
+// }
+
+
 //得到某一个单元格的索引
 int Simulation::getCellIndex(double x, double y, double z){
     int i = static_cast<int>(x * nc_ / box_width_);
@@ -121,6 +138,53 @@ int Simulation::getCellIndex(double x, double y, double z){
 }
 
 // 计算势能
+// void Simulation::calculatePotential() {
+//     // 创建并执行正向FFT计划，将密度数据转换到频率空间
+//     fftw_plan forward_plan = fftw_plan_dft_3d(nc_, nc_, nc_, density_buffer_, k_buffer_, FFTW_FORWARD, FFTW_MEASURE);
+//     fftw_execute(forward_plan);
+//     // 完成后立即释放FFT计划资源
+//     fftw_destroy_plan(forward_plan);
+
+//     // 在频率空间处理势能数据
+//     for (int i = 0; i < nc_; ++i) {
+//         for (int j = 0; j < nc_; ++j) {
+//             for (int k = 0; k < nc_; ++k) {
+//                 int index = k + nc_ * (j + nc_ * i);
+//                 // 计算每个点的k向量
+//                 // std::array<double, 3> k_vec = getKVector(i, j, k);没用
+//                 // 计算k向量的平方
+//                 // double k_squared = k_vec[0] * k_vec[0] + k_vec[1] * k_vec[1] + k_vec[2] * k_vec[2];
+//                 double k_squared = (i * i + j * j + k * k) / (box_width_ * box_width_);
+//                 // 避免除以零
+//                 if (k_squared == 0) {
+//                     k_buffer_[index][0] = 0;
+//                     k_buffer_[index][1] = 0;
+//                 } else {
+//                     // 根据k向量的平方调整势能值
+//                     double scaling_factor = -4 * M_PI / k_squared;
+//                     k_buffer_[index][0] *= scaling_factor;
+//                     k_buffer_[index][1] *= scaling_factor;
+//                 }
+//             }
+//         }
+//     }
+
+//     // 创建并执行逆向FFT计划，将势能数据从频率空间转换回实空间
+//     fftw_plan inverse_plan = fftw_plan_dft_3d(nc_, nc_, nc_, k_buffer_, potential_buffer_, FFTW_BACKWARD, FFTW_MEASURE);
+//     fftw_execute(inverse_plan);
+//     // 完成后立即释放FFT计划资源
+//     fftw_destroy_plan(inverse_plan);
+
+//     // 应用归一化因子，以确保逆FFT后的结果正确
+//     double norm_factor = 1.0 / 8 * (nc_ * nc_ * nc_);
+//     for (int i = 0; i < nc_ * nc_ * nc_; ++i) {
+//         potential_buffer_[i][0] *= norm_factor;
+//         // 对于势能，我们只关心实部
+//         potential_buffer_[i][1] = 0;
+//     }
+// }
+
+// OpenMP版
 void Simulation::calculatePotential() {
     // 创建并执行正向FFT计划，将密度数据转换到频率空间
     fftw_plan forward_plan = fftw_plan_dft_3d(nc_, nc_, nc_, density_buffer_, k_buffer_, FFTW_FORWARD, FFTW_MEASURE);
@@ -129,21 +193,16 @@ void Simulation::calculatePotential() {
     fftw_destroy_plan(forward_plan);
 
     // 在频率空间处理势能数据
+    #pragma omp parallel for collapse(3)
     for (int i = 0; i < nc_; ++i) {
         for (int j = 0; j < nc_; ++j) {
             for (int k = 0; k < nc_; ++k) {
                 int index = k + nc_ * (j + nc_ * i);
-                // 计算每个点的k向量
-                // std::array<double, 3> k_vec = getKVector(i, j, k);没用
-                // 计算k向量的平方
-                // double k_squared = k_vec[0] * k_vec[0] + k_vec[1] * k_vec[1] + k_vec[2] * k_vec[2];
                 double k_squared = (i * i + j * j + k * k) / (box_width_ * box_width_);
-                // 避免除以零
                 if (k_squared == 0) {
                     k_buffer_[index][0] = 0;
                     k_buffer_[index][1] = 0;
                 } else {
-                    // 根据k向量的平方调整势能值
                     double scaling_factor = -4 * M_PI / k_squared;
                     k_buffer_[index][0] *= scaling_factor;
                     k_buffer_[index][1] *= scaling_factor;
@@ -167,6 +226,7 @@ void Simulation::calculatePotential() {
     }
 }
 
+
 // 在给定网格索引处获取势能值
 double Simulation::getPotentialAtGridIndex(int i, int j, int k) {
     int index = k + nc_ * (j + nc_ * i);
@@ -174,9 +234,28 @@ double Simulation::getPotentialAtGridIndex(int i, int j, int k) {
     return potential_buffer_[index][0]; // 我们只关心实部
 }
 
+// 计算梯度
+// std::vector<std::array<double, 3>> Simulation::calculateGradient(const fftw_complex* potential) {
+//     std::vector<std::array<double, 3>> gradient(nc_ * nc_ * nc_);
+    
+//     for (int i = 0; i < nc_; ++i) {
+//         for (int j = 0; j < nc_; ++j) {
+//             for (int k = 0; k < nc_; ++k) {
+//                 int index = (k + nc_ * (j + nc_ * i));
+//                 gradient[index][0] = -(potential[wrapIndex(i+1, nc_) * nc_ * nc_ + j * nc_ + k][0] - potential[wrapIndex(i-1, nc_) * nc_ * nc_ + j * nc_ + k][0]) / (2 * box_width_ / nc_);
+//                 gradient[index][1] = -(potential[i * nc_ * nc_ + wrapIndex(j+1, nc_) * nc_ + k][0] - potential[i * nc_ * nc_ + wrapIndex(j-1, nc_) * nc_ + k][0]) / (2 * box_width_ / nc_);
+//                 gradient[index][2] = -(potential[i * nc_ * nc_ + j * nc_ + wrapIndex(k+1, nc_)][0] - potential[i * nc_ * nc_ + j * nc_ + wrapIndex(k-1, nc_)][0]) / (2 * box_width_ / nc_);
+//             }
+//         }
+//     }
+//     return gradient;
+// }
+
+// OpenMP版
 std::vector<std::array<double, 3>> Simulation::calculateGradient(const fftw_complex* potential) {
     std::vector<std::array<double, 3>> gradient(nc_ * nc_ * nc_);
     
+    #pragma omp parallel for collapse(3)
     for (int i = 0; i < nc_; ++i) {
         for (int j = 0; j < nc_; ++j) {
             for (int k = 0; k < nc_; ++k) {
@@ -190,11 +269,13 @@ std::vector<std::array<double, 3>> Simulation::calculateGradient(const fftw_comp
     return gradient;
 }
 
+
 // 将两个边界接在一起
 int Simulation::wrapIndex(int index, int max) {
     return (index + max) % max; // 模运算
 }
 
+// 更新粒子群状态
 void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
     for (Particle& particle : particles_) {
         std::array<double, 3> pos = particle.getPosition();
@@ -216,6 +297,27 @@ void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradi
         particle.update(delta_t, acceleration);
     }
 }
+
+// OpenMP版
+// void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
+//     #pragma omp parallel for
+//     for (size_t idx = 0; idx < particles_.size(); ++idx) {
+//         Particle& particle = particles_[idx];
+//         std::array<double, 3> pos = particle.getPosition();
+        
+//         int i = static_cast<int>(pos[0] * nc_ / box_width_);
+//         int j = static_cast<int>(pos[1] * nc_ / box_width_);
+//         int k = static_cast<int>(pos[2] * nc_ / box_width_);
+
+//         int index = i * nc_ * nc_ + j * nc_ + k;
+
+//         std::array<double, 3> acceleration = gradients[index];
+
+//         particle.update(delta_t, acceleration);
+//     }
+// }
+
+
 
 
 void Simulation::expandBox(double expansion_factor) {
