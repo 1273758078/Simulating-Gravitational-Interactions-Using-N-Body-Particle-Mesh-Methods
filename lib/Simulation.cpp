@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <optional>
 #include <string>
+#include <iostream>
 
 // Particle 类的实现
 Particle::Particle(const std::array<double, 3>& position, const std::array<double, 3>& velocity)
@@ -65,6 +66,17 @@ void Simulation::initializeParticles(int num_particles, unsigned seed) {
     for (int i = 0; i < num_particles; ++i) {
         addParticle({dis(gen), dis(gen), dis(gen)});
     }
+
+    // // 打印最多前五个粒子的位置
+    // for (size_t i = 0; i < particles_.size() && i < 5; i++) {
+    //     std::array<double, 3> pos = particles_[i].getPosition(); // 使用getPosition()获取位置
+    //     std::cout << "Particle " << i << ": (" 
+    //               << pos[0] << ", " // 使用正确的索引访问数组元素
+    //               << pos[1] << ", " 
+    //               << pos[2] << ")" << std::endl;
+    // }
+
+
 }
 
 // 运行模拟
@@ -356,4 +368,20 @@ double Simulation::getParticleMass() const {
 double Simulation::getCellVolume() const {
     // 假设你已经计算了单元格体积
     return std::pow(box_width_ / nc_, 3);
+}
+
+// 提取所有粒子的位置，返回一个向量
+std::vector<std::array<double, 3>> Simulation::getParticlesPositions() const {
+    std::vector<std::array<double, 3>> positions;
+    positions.reserve(particles_.size()); // 预留足够的空间以避免多次内存分配
+
+    for (const auto& particle : particles_) {
+        positions.push_back(particle.getPosition());
+        std::cout << "Particle " << ": (" 
+                    << particle.getPosition()[0] << ", " // 使用正确的索引访问数组元素
+                    << particle.getPosition()[1] << ", " 
+                    << particle.getPosition()[2] << ")" << std::endl;    
+    }
+
+    return positions;
 }

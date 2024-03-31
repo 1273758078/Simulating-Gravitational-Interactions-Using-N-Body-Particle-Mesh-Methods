@@ -57,6 +57,8 @@ public:
     double getParticleMass() const;
     // 得到单元格的体积
     double getCellVolume() const;
+    // 提取所有粒子的位置，返回一个向量
+    std::vector<std::array<double, 3>> getParticlesPositions() const;
 
 private:
     std::vector<Particle> particles_;  // 模拟中的粒子数组
