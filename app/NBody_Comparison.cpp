@@ -125,20 +125,21 @@ int main(int argc, char** argv) {
         std::cout << "Process " << world_rank << " running simulation with expansion factor " << expansion_factor << std::endl;
     }
 
-    Simulation simulation(1.0, 0.1, 100.0, expansion_factor, 100, 1);
+    // Simulation simulation(1.5, 0.1, 100.0, expansion_factor, 10, 10);
+    Simulation simulation(0.5, 0.01, 100.0, expansion_factor, 100, 1e4);
     simulation.initializeParticles(num_particles, 93170929);
-    simulation.run(std::nullopt);
+    // simulation.run(std::nullopt);
 
     std::vector<std::array<double, 3>> positions = simulation.getParticlesPositions();
     std::vector<double> correlation = correlationFunction(positions, 100);
 
-    // 打印前五个粒子的位置（如果它们存在）
-    for (size_t i = 0; i < positions.size() && i < 5; ++i) {
-        std::cout << "Particle " << i << ": (" 
-                << positions[i][1] << ", " 
-                << positions[i][2] << ", " 
-                << positions[i][3] << ")" << std::endl;
-    }
+    // // 打印前五个粒子的位置（如果它们存在）
+    // for (size_t i = 0; i < positions.size() && i < 5; ++i) {
+    //     std::cout << "Particle " << i << ": (" 
+    //             << positions[i][0] << ", " 
+    //             << positions[i][1] << ", " 
+    //             << positions[i][2] << ")" << std::endl;
+    // }
 
     if (world_rank != 0) {
         MPI_Send(correlation.data(), correlation.size(), MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);

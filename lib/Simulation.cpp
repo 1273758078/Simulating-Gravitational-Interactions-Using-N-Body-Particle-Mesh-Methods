@@ -87,6 +87,21 @@ void Simulation::run(const std::optional<std::string>& output_folder) {
         calculateDensity();
         calculatePotential();
         auto gradients = calculateGradient(potential_buffer_);
+        
+        
+        std::vector<std::array<double, 3>> positions = getParticlesPositions();
+        // // 打印前五个粒子的位置（如果它们存在）
+        // for (size_t i = 0; i < positions.size() && i < 5; ++i) {
+        //     std::cout << "Particle " << i << ": (" 
+        //             << positions[i][0] << ", " 
+        //             << positions[i][1] << ", " 
+        //             << positions[i][2] << ")" << std::endl;
+        // }
+
+
+
+
+
         updateParticles(gradients, delta_t_);
         expandBox(expansion_factor_);
 

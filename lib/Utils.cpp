@@ -64,43 +64,76 @@ void SaveToFile(fftw_complex* density_map, const size_t n_cells, const string &f
     }
 }
 
-vector<double> correlationFunction(vector<array<double,3>> positions, int n_bins)
-{
-    if(n_bins <= 0)
-    {
+// vector<double> correlationFunction(vector<array<double,3>> positions, int n_bins)
+// {
+//     if(n_bins <= 0)
+//     {
+//         throw std::runtime_error("Correlation function requires a positive definite number of bins.");
+//     }
+
+//     // Container for correlation function
+//     std::vector<double> CR(n_bins, 0.0);
+
+//     auto shortestDistance = [](double x1, double x2)
+//     {
+//         double d = std::abs(x1 - x2);
+//         return d < 0.5 ? d : (1 - d);
+//     };
+    
+//     // Only take a limited sample of positions if there are too many 
+//     int N = std::min(1000, int(positions.size()));
+//     for (int i = 0; i < N; i += 1)
+//     {
+//         for (int j = i; j < N; j += 1)
+//         {
+
+//             double dx = shortestDistance(positions[i][0], positions[j][0]);
+//             double dy = shortestDistance(positions[i][1], positions[j][1]);
+//             double dz = shortestDistance(positions[i][2], positions[j][2]);
+//             double r = std::sqrt(dx * dx + dy * dy + dz * dz);
+//             if(r < 0.5)  // within the 0.5 radius sphere to avoid edge effects from cube
+//             {
+//                 int idx = static_cast<int>(r * n_bins * 2);
+//                 CR[idx] += 1 / (N * 4 * M_PI * r * r);
+//             }
+//         }
+//     }
+//     for (auto &c : CR)
+//     {
+//         c = std::log(c);
+//     }
+//     return CR;
+// }
+
+vector<double> correlationFunction(vector<array<double,3>> positions, int n_bins) {
+    if(n_bins <= 0) {
         throw std::runtime_error("Correlation function requires a positive definite number of bins.");
     }
 
-    // Container for correlation function
-    std::vector<double> CR(n_bins, 0.0);
+    vector<double> CR(n_bins, 0.0);
 
-    auto shortestDistance = [](double x1, double x2)
-    {
+    auto shortestDistance = [](double x1, double x2) {
         double d = std::abs(x1 - x2);
         return d < 0.5 ? d : (1 - d);
     };
-    
-    // Only take a limited sample of positions if there are too many 
-    int N = std::min(1000, int(positions.size()));
-    for (int i = 0; i < N; i += 1)
-    {
-        for (int j = i; j < N; j += 1)
-        {
 
+    int N = std::min(1000, int(positions.size()));
+    for (int i = 0; i < N; i++) {
+        for (int j = i + 1; j < N; j++) {
             double dx = shortestDistance(positions[i][0], positions[j][0]);
             double dy = shortestDistance(positions[i][1], positions[j][1]);
             double dz = shortestDistance(positions[i][2], positions[j][2]);
             double r = std::sqrt(dx * dx + dy * dy + dz * dz);
-            if(r < 0.5)  // within the 0.5 radius sphere to avoid edge effects from cube
-            {
+            if(r > 0 && r < 0.5) {
                 int idx = static_cast<int>(r * n_bins * 2);
+                if (idx >= n_bins) idx = n_bins - 1; // 保护以防idx超出界限
                 CR[idx] += 1 / (N * 4 * M_PI * r * r);
             }
         }
     }
-    for (auto &c : CR)
-    {
-        c = std::log(c);
+    
+    for (auto &c : CR) {
+        c = c > 0 ? std::log(c) : std::log(std::numeric_limits<double>::min()); // 为防止取对数时出现-无穷大的情况
     }
     return CR;
 }
