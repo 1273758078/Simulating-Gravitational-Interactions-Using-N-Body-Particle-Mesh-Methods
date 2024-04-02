@@ -36,12 +36,24 @@ void Particle::setVelocity(const std::array<double, 3>& velocity) {
 }
 
 // 根据加速度和时间步长更新粒子的位置和速度
+// void Particle::update(double delta_t, const std::array<double, 3>& acceleration) {
+//     for (int i = 0; i < 3; ++i) {
+//         velocity_[i] += acceleration[i] * delta_t;
+//         position_[i] += velocity_[i] * delta_t;
+//     }
+// }
+
 void Particle::update(double delta_t, const std::array<double, 3>& acceleration) {
     for (int i = 0; i < 3; ++i) {
         velocity_[i] += acceleration[i] * delta_t;
         position_[i] += velocity_[i] * delta_t;
+        
+        // Ensure the position wraps around the simulation box bounds
+        if (position_[i] < 0) position_[i] += 1.0;  // If position is negative, wrap around to the positive side
+        else if (position_[i] >= 1.0) position_[i] -= 1.0;  // If position exceeds 1.0, wrap back to the start
     }
 }
+
 
 // Simulation 类的实现
 Simulation::Simulation(double time_max, double delta_t, double box_width, double expansion_factor, int nc, double particle_mass)
@@ -54,6 +66,19 @@ Simulation::Simulation(double time_max, double delta_t, double box_width, double
     initializeDensityBuffer();
 }
 
+// 析构函数，释放分配的内存
+Simulation::~Simulation() {
+    if (density_buffer_ != nullptr) {
+        fftw_free(density_buffer_);
+    }
+    if (k_buffer_ != nullptr) {
+        fftw_free(k_buffer_);
+    }
+    if (potential_buffer_ != nullptr) {
+        fftw_free(potential_buffer_);
+    }
+}
+
 // 向模拟中添加粒子
 void Simulation::addParticle(const std::array<double, 3>& position) {
     particles_.emplace_back(position, std::array<double, 3>{0.0, 0.0, 0.0});
@@ -62,7 +87,7 @@ void Simulation::addParticle(const std::array<double, 3>& position) {
 // 初始化粒子，根据给定的数量和种子，随机分布粒子
 void Simulation::initializeParticles(int num_particles, unsigned seed) {
     std::mt19937 gen(seed);
-    std::uniform_real_distribution<> dis(0.0, box_width_); // 确保粒子位置在箱子范围内
+    std::uniform_real_distribution<> dis(0.0, 1.0); // 确保粒子位置在箱子范围内box_width_
     for (int i = 0; i < num_particles; ++i) {
         addParticle({dis(gen), dis(gen), dis(gen)});
     }
@@ -89,14 +114,14 @@ void Simulation::run(const std::optional<std::string>& output_folder) {
         auto gradients = calculateGradient(potential_buffer_);
         
         
-        std::vector<std::array<double, 3>> positions = getParticlesPositions();
-        // // 打印前五个粒子的位置（如果它们存在）
-        // for (size_t i = 0; i < positions.size() && i < 5; ++i) {
-        //     std::cout << "Particle " << i << ": (" 
-        //             << positions[i][0] << ", " 
-        //             << positions[i][1] << ", " 
-        //             << positions[i][2] << ")" << std::endl;
-        // }
+        std::vector<std::array<double, 3>> positionss = getParticlesPositions();
+        // 打印前五个粒子的位置（如果它们存在）
+        for (size_t i = 0; i < positionss.size() && i < 5; ++i) {
+            std::cout << "Particle " << i << ": (" 
+                    << positionss[i][0] << ", " 
+                    << positionss[i][1] << ", " 
+                    << positionss[i][2] << ")" << std::endl;
+        }
 
 
 
@@ -125,15 +150,39 @@ void Simulation::initializeDensityBuffer() {
 
 
 // 根据粒子的位置计算密度
+// void Simulation::calculateDensity() {
+//     initializeDensityBuffer();
+//     double cell_volume = std::pow(box_width_ / nc_, 3);
+//     for (const auto& particle : particles_) {
+//         std::array<double, 3> position = particle.getPosition();
+//         int i = static_cast<int>(position[0] * nc_ / box_width_);
+//         int j = static_cast<int>(position[1] * nc_ / box_width_);
+//         int k = static_cast<int>(position[2] * nc_ / box_width_);
+//         int index = (k + nc_ * (j + nc_ * i)) % (nc_ * nc_ * nc_);
+//         density_buffer_[index][0] += particle_mass_ / cell_volume;
+//     }
+// }
 void Simulation::calculateDensity() {
     initializeDensityBuffer();
     double cell_volume = std::pow(box_width_ / nc_, 3);
     for (const auto& particle : particles_) {
         std::array<double, 3> position = particle.getPosition();
-        int i = static_cast<int>(position[0] * nc_ / box_width_);
-        int j = static_cast<int>(position[1] * nc_ / box_width_);
-        int k = static_cast<int>(position[2] * nc_ / box_width_);
-        int index = (k + nc_ * (j + nc_ * i)) % (nc_ * nc_ * nc_);
+
+        // int i = static_cast<int>(position[0] * nc_);
+        // int j = static_cast<int>(position[1] * nc_);
+        // int k = static_cast<int>(position[2] * nc_);
+
+        // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
+        int i = std::min(static_cast<int>(position[0] * nc_), nc_ - 1);
+        int j = std::min(static_cast<int>(position[1] * nc_), nc_ - 1);
+        int k = std::min(static_cast<int>(position[2] * nc_), nc_ - 1);
+
+        // 确保索引不会为负
+        i = std::max(i, 0);
+        j = std::max(j, 0);
+        k = std::max(k, 0);
+
+        int index = (k + nc_ * (j + nc_ * i));
         density_buffer_[index][0] += particle_mass_ / cell_volume;
     }
 }
@@ -157,10 +206,21 @@ void Simulation::calculateDensity() {
 
 //得到某一个单元格的索引
 int Simulation::getCellIndex(double x, double y, double z){
-    int i = static_cast<int>(x * nc_ / box_width_);
-    int j = static_cast<int>(y * nc_ / box_width_);
-    int k = static_cast<int>(z * nc_ / box_width_);
-    int index = (k + nc_ * (j + nc_ * i)) % (nc_ * nc_ * nc_);
+    // int i = static_cast<int>(x * nc_);
+    // int j = static_cast<int>(y * nc_);
+    // int k = static_cast<int>(z * nc_);
+
+    // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
+    int i = std::min(static_cast<int>(x * nc_), nc_ - 1);
+    int j = std::min(static_cast<int>(y * nc_), nc_ - 1);
+    int k = std::min(static_cast<int>(z * nc_), nc_ - 1);
+
+    // 确保索引不会为负
+    i = std::max(i, 0);
+    j = std::max(j, 0);
+    k = std::max(k, 0);
+
+    int index = (k + nc_ * (j + nc_ * i));
     return index;
 }
 
@@ -245,7 +305,7 @@ void Simulation::calculatePotential() {
     fftw_destroy_plan(inverse_plan);
 
     // 应用归一化因子，以确保逆FFT后的结果正确
-    double norm_factor = 1.0 / 8 * (nc_ * nc_ * nc_);
+    double norm_factor = 1.0 / (8 * (nc_ * nc_ * nc_));
     for (int i = 0; i < nc_ * nc_ * nc_; ++i) {
         potential_buffer_[i][0] *= norm_factor;
         // 对于势能，我们只关心实部
@@ -303,14 +363,58 @@ int Simulation::wrapIndex(int index, int max) {
 }
 
 // 更新粒子群状态
+// void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
+//     for (Particle& particle : particles_) {
+//         std::array<double, 3> pos = particle.getPosition();
+        
+//         // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
+//         int i = std::min(static_cast<int>(pos[0] * nc_ / box_width_), nc_ - 1);
+//         int j = std::min(static_cast<int>(pos[1] * nc_ / box_width_), nc_ - 1);
+//         int k = std::min(static_cast<int>(pos[2] * nc_ / box_width_), nc_ - 1);
+
+//         // 确保索引不会为负
+//         i = std::max(i, 0);
+//         j = std::max(j, 0);
+//         k = std::max(k, 0);
+
+//         // 获得格点上的加速度
+//         std::array<double, 3> acceleration = gradients[i * nc_ * nc_ + j * nc_ + k];
+
+//         // 更新粒子状态
+//         particle.update(delta_t, acceleration);
+//     }
+// }
+
+// void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
+//     for (Particle& particle : particles_) {
+//         std::array<double, 3> pos = particle.getPosition();
+        
+//         // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
+//         int i = std::min(static_cast<int>(pos[0] * nc_), nc_ - 1);
+//         int j = std::min(static_cast<int>(pos[1] * nc_), nc_ - 1);
+//         int k = std::min(static_cast<int>(pos[2] * nc_), nc_ - 1);
+
+//         // 确保索引不会为负
+//         i = std::max(i, 0);
+//         j = std::max(j, 0);
+//         k = std::max(k, 0);
+
+//         // 获得格点上的加速度
+//         std::array<double, 3> acceleration = gradients[i * nc_ * nc_ + j * nc_ + k];
+
+//         // 更新粒子状态
+//         particle.update(delta_t, acceleration);
+//     }
+// }
+
 void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
     for (Particle& particle : particles_) {
         std::array<double, 3> pos = particle.getPosition();
         
         // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
-        int i = std::min(static_cast<int>(pos[0] * nc_ / box_width_), nc_ - 1);
-        int j = std::min(static_cast<int>(pos[1] * nc_ / box_width_), nc_ - 1);
-        int k = std::min(static_cast<int>(pos[2] * nc_ / box_width_), nc_ - 1);
+        int i = std::min(static_cast<int>(pos[0] * nc_), nc_ - 1);
+        int j = std::min(static_cast<int>(pos[1] * nc_), nc_ - 1);
+        int k = std::min(static_cast<int>(pos[2] * nc_), nc_ - 1);
 
         // 确保索引不会为负
         i = std::max(i, 0);
@@ -322,8 +426,23 @@ void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradi
 
         // 更新粒子状态
         particle.update(delta_t, acceleration);
+
+        // 重新获取更新后的位置
+        pos = particle.getPosition();
+
+        // 应用周期性边界条件
+        for (int dim = 0; dim < 3; ++dim) {
+            if (pos[dim] < 0) pos[dim] += 1.0;  // 如果位置小于0，包裹到正侧
+            else if (pos[dim] >= 1.0) pos[dim] -= 1.0;  // 如果位置大于等于1，包裹回起始侧
+        }
+
+        // 用更新后的、考虑了周期性边界条件的位置更新粒子位置
+        particle.setPosition(pos);
     }
 }
+
+
+
 
 // OpenMP版
 // void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
@@ -392,11 +511,20 @@ std::vector<std::array<double, 3>> Simulation::getParticlesPositions() const {
 
     for (const auto& particle : particles_) {
         positions.push_back(particle.getPosition());
-        std::cout << "Particle " << ": (" 
-                    << particle.getPosition()[0] << ", " // 使用正确的索引访问数组元素
-                    << particle.getPosition()[1] << ", " 
-                    << particle.getPosition()[2] << ")" << std::endl;    
+        // std::cout << "Particle " << ": (" 
+        //             << particle.getPosition()[0] << ", " // 使用正确的索引访问数组元素
+        //             << particle.getPosition()[1] << ", " 
+        //             << particle.getPosition()[2] << ")" << std::endl;    
     }
+
+
+    // 打印前五个粒子的位置（如果它们存在）
+    // for (size_t i = 0; i < positions.size() && i < 5; ++i) {
+    //     std::cout << "Particle " << i << ": (" 
+    //             << positions[i][0] << ", " 
+    //             << positions[i][1] << ", " 
+    //             << positions[i][2] << ")" << std::endl;
+    // }
 
     return positions;
 }

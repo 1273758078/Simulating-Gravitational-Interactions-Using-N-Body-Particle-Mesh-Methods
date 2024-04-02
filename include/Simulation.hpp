@@ -30,7 +30,7 @@ private:
 class Simulation {
 public:
     Simulation(double time_max, double delta_t, double box_width, double expansion_factor, int nc, double particle_mass);
-    // ~Simulation();
+    ~Simulation();
     void addParticle(const std::array<double, 3>& position);
     void initializeParticles(int num_particles, unsigned seed);
     void run(const std::optional<std::string>& output_folder);
