@@ -132,7 +132,7 @@ void Simulation::run(const std::optional<std::string>& output_folder) {
 
         // 如果提供了输出文件夹并且当前步骤是保存间隔的倍数，则保存密度图像
         if (output_folder && steps % save_interval == 0) {
-            std::string filename = *output_folder + "/density_" + std::to_string(steps) + ".ppm";
+            std::string filename = *output_folder + "/density_" + std::to_string(steps) + ".pbm";
             SaveToFile(density_buffer_, nc_, filename);
         }
         steps++;

@@ -25,7 +25,7 @@ Given that $n_p$ must always be larger than $N_c$ to ensure a smooth density fun
 
 
 
-2.2 Application 2: Comparing Universes with Distributed Memory
+1.11 Application 1: Visualising A Developing Universe
 ./build/bin/NBody_Visualiser -nc 101 -np 10 -t 1.5 -dt 0.01 -F 1.0 -o Images/F1.0 -s 93170929
 Images can be found in "/workspaces/COMP0210Assignment2/Images/F1.0"
 
@@ -98,3 +98,13 @@ updateParticles: Very short execution times with minimal changes across differen
 For calculateDensity, the slight increase in execution time with more threads may necessitate investigating potential data contention, memory access patterns, or the overhead of managing a larger number of threads.
 
 updateParticles being extremely fast already means that parallelisation does not significantly impact overall performance, indicating that optimization efforts might be better focused elsewhere.
+
+2.2 Application 2: Comparing Universes with Distributed Memory
+4. The correlationFunction was modified in several ways to address potential issues leading to incorrect results, specifically, infinite or negative infinite values. The modifications are as follows:
+
+(1) Ensure CR[idx] is positive and non-zero before taking its logarithm: The code now checks if CR[idx] is greater than zero before applying the logarithm. If CR[idx] is zero or negative, which can happen due to calculation or rounding errors, it assigns a very small positive number (std::numeric_limits<double>::min()) to avoid taking the logarithm of zero or negative numbers, which is undefined or results in negative infinity.
+
+(2) Handle edge conditions: The calculation of distance r and its corresponding index idx is adjusted to ensure that idx does not exceed the bounds of the CR array. Additionally, the condition checks if r is greater than zero to prevent division by zero errors when calculating CR[idx].
+
+(3) Optimize the use of the logarithm function: When dealing with the logarithm's input value, if the value is zero, the code now opts to assign a minimal positive value before taking the logarithm. This approach avoids negative infinity results, which are not meaningful in the context of this calculation.
+

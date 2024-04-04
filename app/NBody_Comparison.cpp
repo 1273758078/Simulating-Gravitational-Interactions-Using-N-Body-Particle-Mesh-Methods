@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
         std::cout << "Process " << world_rank << " running simulation with expansion factor " << expansion_factor << std::endl;
     }
 
-    Simulation simulation(1.5, 0.01, 100.0, expansion_factor, 10, 100);
+    Simulation simulation(1.0, 0.01, 100.0, expansion_factor, 10, 100);
     // Simulation simulation(1.0, 0.01, 100.0, expansion_factor, 100, 1e5);
     simulation.initializeParticles(num_particles, 93170929);
     simulation.run(std::nullopt);
