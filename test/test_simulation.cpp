@@ -1,61 +1,61 @@
 // test_simulation.cpp
-#define CATCH_CONFIG_MAIN  // 该宏指令让Catch自动生成main函数
+#define CATCH_CONFIG_MAIN  // This macro directive tells Catch to generate a main function
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_all.hpp>
 #include <cmath>
-#include "Simulation.hpp"  // 确保这是你的Simulation类的正确路径
+#include "Simulation.hpp"  // Make sure this is the correct path to your Simulation class
 
 using namespace Catch; //::Matchers
 
 TEST_CASE("Test potential function for single particle", "[Potential Tests]") {
-    // 一颗粒子位于盒子中心，质量为0.01
+    // A single particle is located at the center of the box with a mass of 0.01
     double mass = 0.01;
-    double time_max = 1.0; // 仅为初始化Simulation对象所用
-    double delta_t = 0.1;  // 同上，时间步长
+    double time_max = 1.0; // Used only to initialize the Simulation object
+    double delta_t = 0.1;  // Same as above, time step
     double width = 100;
-    double expansion_factor = 1.0; // 在这个测试中不会用到膨胀因子，但需要为Simulation构造函数提供
+    double expansion_factor = 1.0; // The expansion factor is not used in this test, but is required for the Simulation constructor
     int ncells = 101;
-    double particle_mass = 0.01; // 粒子质量
+    double particle_mass = 0.01; // Particle mass
 
-    // 使用初始参数声明Simulation对象
+    // Declare a Simulation object with initial parameters
     Simulation sim(time_max, delta_t, width, expansion_factor, ncells, particle_mass);
-    sim.addParticle({0.5, 0.5, 0.5}); // 在盒子中心添加一个粒子
-    sim.calculateDensity(); // 计算密度
-    sim.calculatePotential(); // 计算势能
+    sim.addParticle({0.5, 0.5, 0.5}); // Add a single particle at the center of the box
+    sim.calculateDensity(); // Calculate density
+    sim.calculatePotential(); // Calculate potential energy
 
     double w_c = width / ncells;
-    // 沿x轴查看势能函数
+    // Examine the potential function along the x-axis
     for (int i = 0; i < 101; i++) {
         int j = 50;
         int k = 50;
         if (i == 50 && j == 50 && k == 50) {
-            // 忽略中心点，因为点势能在此会是奇异的
+            // Ignore the center point, as the point potential here would be singular
             continue;
         } else {
-            double pot = sim.getPotentialAtGridIndex(i, j, k); // 获取势能
-            // 由于周期性，考虑多源势能的近似值
+            double pot = sim.getPotentialAtGridIndex(i, j, k); // Get potential energy
+            // Considering periodicity, approximate the value of multiple source potential
             double dx1 = std::abs(i - 50) * w_c;
             double dx2 = std::abs(i - 151) * w_c;
             double dx3 = std::abs(i + 51) * w_c;
             double expected_pot =  -mass * (1/dx1 + 1/dx2 + 1/dx3);
-            REQUIRE_THAT(pot, Matchers::WithinRel(expected_pot, 0.3)); // 验证势能是否在预期的相对误差范围内
+            REQUIRE_THAT(pot, Matchers::WithinRel(expected_pot, 0.3)); // Verify that the potential is within the expected relative error range
         }
     }
 }
 
 TEST_CASE("Imaginary components are zero", "[density]") {
-    // 设置模拟的初始参数
-    const double t_max = 10.0;  // 模拟的最大时间
-    const double delta_t = 0.1;  // 时间步长
-    const double box_width = 100.0; // 盒子宽度
-    const double expansion_factor = 1.0; // 扩展因子
-    const int nc = 10; // 单边网格数
-    const double particle_mass = 1.0; // 粒子质量
+    // Set initial parameters for the simulation
+    const double t_max = 10.0;  // The maximum time of the simulation
+    const double delta_t = 0.1;  // Time step
+    const double box_width = 100.0; // Box width
+    const double expansion_factor = 1.0; // Expansion factor
+    const int nc = 10; // Number of grid cells per side
+    const double particle_mass = 1.0; // Particle mass
 
-    // 创建一个不包含粒子的模拟实例
+    // Create a simulation instance without particles
     Simulation sim(t_max, delta_t, box_width, expansion_factor, nc, particle_mass);
-    sim.initializeDensityBuffer(); // 初始化密度缓冲区
-    sim.calculateDensity(); // 计算密度
+    sim.initializeDensityBuffer(); // Initialize the density buffer
+    sim.calculateDensity(); // Calculate density
 
     for (int i = 0; i < sim.getTotalCells(); ++i) {
         REQUIRE(sim.getDensityBuffer()[i][1] == 0.0);
@@ -63,18 +63,18 @@ TEST_CASE("Imaginary components are zero", "[density]") {
 }
 
 TEST_CASE("Density is zero without particles", "[density]") {
-    // 设置模拟的初始参数
-    const double t_max = 10.0;  // 模拟的最大时间
-    const double delta_t = 0.1;  // 时间步长
-    const double box_width = 100.0; // 盒子宽度
-    const double expansion_factor = 1.0; // 扩展因子
-    const int nc = 10; // 单边网格数
-    const double particle_mass = 1.0; // 粒子质量
+    // Set initial parameters for the simulation
+    const double t_max = 10.0;  // The maximum time of the simulation
+    const double delta_t = 0.1;  // Time step
+    const double box_width = 100.0; // Box width
+    const double expansion_factor = 1.0; // Expansion factor
+    const int nc = 10; // Number of grid cells per side
+    const double particle_mass = 1.0; // Particle mass
 
-    // 创建一个不包含粒子的模拟实例
+    // Create a simulation instance without particles
     Simulation sim(t_max, delta_t, box_width, expansion_factor, nc, particle_mass);
-    sim.initializeDensityBuffer(); // 初始化密度缓冲区
-    sim.calculateDensity(); // 计算密度
+    sim.initializeDensityBuffer(); // Initialize the density buffer
+    sim.calculateDensity(); // Calculate density
 
     for (int i = 0; i < sim.getTotalCells(); ++i) {
         REQUIRE(sim.getDensityBuffer()[i][0] == 0.0);
@@ -82,14 +82,13 @@ TEST_CASE("Density is zero without particles", "[density]") {
 }
 
 TEST_CASE("Density with a single particle", "[density]") {
-    // 设置模拟的初始参数
-    const double t_max = 10.0;  // 模拟的最大时间
-    const double delta_t = 0.1;  // 时间步长
-    const double box_width = 100.0; // 盒子宽度
-    const double expansion_factor = 1.0; // 扩展因子
-    const int nc = 10; // 单边网格数
-    const double particle_mass = 1.0; // 粒子质量
-
+    // Set initial parameters for the simulation
+    const double t_max = 10.0;  // The maximum time of the simulation
+    const double delta_t = 0.1;  // Time step
+    const double box_width = 100.0; // Box width
+    const double expansion_factor = 1.0; // Expansion factor
+    const int nc = 10; // Number of grid cells per side
+    const double particle_mass = 1.0; // Particle mass
 
     Simulation sim(t_max, delta_t, box_width, expansion_factor, nc, particle_mass);
     sim.addParticle({0.5, 0.5, 0.5});
@@ -107,18 +106,17 @@ TEST_CASE("Density with a single particle", "[density]") {
 }
 
 TEST_CASE("Density with multiple particles", "[density]") {
-    // 设置模拟的初始参数
-    const double t_max = 10.0;  // 模拟的最大时间
-    const double delta_t = 0.1;  // 时间步长
-    const double box_width = 100.0; // 盒子宽度
-    const double expansion_factor = 1.0; // 扩展因子
-    const int nc = 10; // 单边网格数
-    const double particle_mass = 1.0; // 粒子质量
-
+    // Set initial parameters for the simulation
+    const double t_max = 10.0;  // The maximum time of the simulation
+    const double delta_t = 0.1;  // Time step
+    const double box_width = 100.0; // Box width
+    const double expansion_factor = 1.0; // Expansion factor
+    const int nc = 10; // Number of grid cells per side
+    const double particle_mass = 1.0; // Particle mass
 
     Simulation sim(t_max, delta_t, box_width, expansion_factor, nc, particle_mass);
     sim.addParticle({0.1, 0.1, 0.1});
-    sim.addParticle({0.1, 0.1, 0.1}); // Same cell as first particle
+    sim.addParticle({0.1, 0.1, 0.1}); // Same cell as the first particle
     sim.addParticle({0.9, 0.9, 0.9}); // Different cell
     sim.initializeDensityBuffer();
     sim.calculateDensity();
@@ -140,39 +138,39 @@ TEST_CASE("Density with multiple particles", "[density]") {
     }
 }
 
-// ...包含其他测试案例...
+// ...include other test cases...
 
 TEST_CASE("Gradient of potential is calculated correctly", "[Simulation]") {
-    // 初始化测试用的Simulation对象和势能缓冲区
+    // Initialize a Simulation object and potential buffer for the test
     int nc = 10;
     double box_width = 100.0;
     Simulation sim(1.0, 0.1, box_width, 1.0, nc, 1.0);
     fftw_complex* potential = new fftw_complex[nc * nc * nc]();
     
-    // 设置一个简单的测试情况：在中心处势能非零，在其他地方为零
+    // Set up a simple test case: non-zero potential at the center, zero elsewhere
     int centerIndex = (nc / 2) * nc * nc + (nc / 2) * nc + (nc / 2);
-    potential[centerIndex][0] = 100.0;  // 只设置实部
+    potential[centerIndex][0] = 100.0;  // Set the real part only
     
-    // 计算梯度
+    // Calculate the gradient
     auto gradient = sim.calculateGradient(potential);
     
-    // 进行测试：中心点周围的梯度值应该是已知的
+    // Test: the gradient values around the center should be known
     REQUIRE(gradient[centerIndex][0] == Approx(0.0).margin(1e-5));
     REQUIRE(gradient[centerIndex][1] == Approx(0.0).margin(1e-5));
     REQUIRE(gradient[centerIndex][2] == Approx(0.0).margin(1e-5));
     
-    // 清理
+    // Cleanup
     delete[] potential;
 }
 
 TEST_CASE("Gradient calculation with periodic boundaries", "[Simulation]") {
-    // 测试边界条件
+    // Test boundary conditions
     int nc = 10;
     double box_width = 100.0;
     Simulation sim(1.0, 0.1, box_width, 1.0, nc, 1.0);
     fftw_complex* potential = new fftw_complex[nc * nc * nc]();
     
-    // 设置潜在的线性增加势能
+    // Set up a potential that linearly increases
     for (int i = 0; i < nc; ++i) {
         for (int j = 0; j < nc; ++j) {
             for (int k = 0; k < nc; ++k) {
@@ -182,39 +180,37 @@ TEST_CASE("Gradient calculation with periodic boundaries", "[Simulation]") {
         }
     }
     
-    // 计算梯度并检查边缘处是否正确包裹
+    // Calculate the gradient and check if the edges wrap correctly
     auto gradient = sim.calculateGradient(potential);
     
     int edgeIndex = nc - 1;
-    int wrappedIndex = sim.wrapIndex(edgeIndex + 1, nc); // 应该为0
+    int wrappedIndex = sim.wrapIndex(edgeIndex + 1, nc); // Should be 0
     
     REQUIRE(wrappedIndex == 0);
-    REQUIRE(gradient[edgeIndex][0] == Approx(-1.0).margin(1e-5));  // 边缘处梯度应该为-1
+    REQUIRE(gradient[edgeIndex][0] == Approx(-1.0).margin(1e-5));  // The gradient at the edge should be -1
     
-    // 清理
+    // Cleanup
     delete[] potential;
 }
 
 TEST_CASE("Particles are updated correctly", "[Simulation]") {
-    // 设置初始条件
+    // Set initial conditions
     Particle particle({0.5, 0.5, 0.5}, {0.0, 0.0, 0.0});
-    std::array<double, 3> acceleration = {1.0, 0.0, 0.0}; // 假设沿x轴有一个单位加速度
-    double delta_t = 1.0; // 时间步长为1秒
+    std::array<double, 3> acceleration = {1.0, 0.0, 0.0}; // Assume a unit acceleration along the x-axis
+    double delta_t = 1.0; // Time step of 1 second
 
-    // 执行更新
+    // Perform the update
     particle.update(delta_t, acceleration);
 
-    // 检查结果
+    // Check the results
     auto position = particle.getPosition();
     auto velocity = particle.getVelocity();
 
-    REQUIRE(position[0] == Approx(0.5 + 1.0 * delta_t)); // 检查x位置是否正确更新
-    REQUIRE(velocity[0] == Approx(1.0 * delta_t)); // 检查x速度是否正确更新
-    // 由于沿y和z方向没有加速度，所以它们的位置和速度不应该改变
+    REQUIRE(position[0] == Approx(0.5 + 1.0 * delta_t)); // Check if x position is correctly updated
+    REQUIRE(velocity[0] == Approx(1.0 * delta_t)); // Check if x velocity is correctly updated
+    // Since there was no acceleration along the y and z directions, their positions and velocities should not change
     REQUIRE(position[1] == Approx(0.5));
     REQUIRE(position[2] == Approx(0.5));
     REQUIRE(velocity[1] == Approx(0.0));
     REQUIRE(velocity[2] == Approx(0.0));
 }
-
-// 可以继续添加其他测试案例...

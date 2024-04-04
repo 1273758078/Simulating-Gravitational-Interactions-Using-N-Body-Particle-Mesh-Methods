@@ -126,14 +126,14 @@ vector<double> correlationFunction(vector<array<double,3>> positions, int n_bins
             double r = std::sqrt(dx * dx + dy * dy + dz * dz);
             if(r > 0 && r < 0.5) {
                 int idx = static_cast<int>(r * n_bins * 2);
-                if (idx >= n_bins) idx = n_bins - 1; // 保护以防idx超出界限
+                if (idx >= n_bins) idx = n_bins - 1; // Protect to prevent IDX from exceeding the limit
                 CR[idx] += 1 / (N * 4 * M_PI * r * r);
             }
         }
     }
     
     for (auto &c : CR) {
-        c = c > 0 ? std::log(c) : std::log(std::numeric_limits<double>::min()); // 为防止取对数时出现-无穷大的情况
+        c = c > 0 ? std::log(c) : std::log(std::numeric_limits<double>::min()); // To prevent the occurrence of - infinity when taking logarithms
     }
     return CR;
 }

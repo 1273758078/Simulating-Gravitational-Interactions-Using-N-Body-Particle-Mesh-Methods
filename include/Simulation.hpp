@@ -10,7 +10,7 @@
 #include <optional>
 #include <string>
 
-// 粒子类
+// Particle class
 class Particle {
 public:
     Particle(const std::array<double, 3>& position, const std::array<double, 3>& velocity);
@@ -20,13 +20,12 @@ public:
     void setVelocity(const std::array<double, 3>& velocity);
     void update(double delta_t, const std::array<double, 3>& acceleration);
 
-
 private:
-    std::array<double, 3> position_; // 粒子位置
-    std::array<double, 3> velocity_; // 粒子速度
+    std::array<double, 3> position_; // Particle position
+    std::array<double, 3> velocity_; // Particle velocity
 };
 
-// 模拟类
+// Simulation class
 class Simulation {
 public:
     Simulation(double time_max, double delta_t, double box_width, double expansion_factor, int nc, double particle_mass);
@@ -36,42 +35,42 @@ public:
     void run(const std::optional<std::string>& output_folder);
     void initializeDensityBuffer();
     void calculateDensity();
-    //得到某一个cell的索引
+    // Get the index of a cell
     int getCellIndex(double x, double y, double z);
     void calculatePotential();
-    // 获取给定网格索引(i, j, k)处的势能
+    // Get the potential energy at a given grid index (i, j, k)
     double getPotentialAtGridIndex(int i, int j, int k);
-    // 梯度计算函数
+    // Function for gradient calculation
     std::vector<std::array<double, 3>> calculateGradient(const fftw_complex* potential);
-    // 更新所有粒子的函数
+    // Function to update all particles
     void updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t);
-    // 新增扩展盒子的函数
+    // Function to expand the simulation box
     void expandBox(double expansion_factor);
-    // 得到单元格的总数
+    // Get the total number of cells
     int getTotalCells() const;
-    // 得到密度函数的数据
+    // Get the data of the density function
     fftw_complex* getDensityBuffer() const;
-    // 将两个边界接在一起
+    // Wrap two boundaries together
     int wrapIndex(int index, int max);
-    // 得到粒子的质量
+    // Get the mass of a particle
     double getParticleMass() const;
-    // 得到单元格的体积
+    // Get the volume of a cell
     double getCellVolume() const;
-    // 提取所有粒子的位置，返回一个向量
+    // Extract the positions of all particles, returning a vector
     std::vector<std::array<double, 3>> getParticlesPositions() const;
 
 private:
-    std::vector<Particle> particles_;  // 模拟中的粒子数组
-    double time_max_;                  // 模拟的最大时间
-    double delta_t_;                   // 模拟的时间步长
-    double box_width_;                 // 模拟的空间盒子宽度
-    double expansion_factor_;          // 空间膨胀因子
-    int nc_;                           // 网格单元数
-    double particle_mass_;             // 粒子质量
-    fftw_complex* density_buffer_;     // 密度缓冲区
-    fftw_complex* k_buffer_; // 过渡区
-    fftw_complex* potential_buffer_;   // 势能缓冲区
-    double cell_width_; // 单元格的宽度，如果有的话
+    std::vector<Particle> particles_;  // Array of particles in the simulation
+    double time_max_;                  // Maximum simulation time
+    double delta_t_;                   // Simulation time step
+    double box_width_;                 // Width of the simulation space box
+    double expansion_factor_;          // Space expansion factor
+    int nc_;                           // Number of grid cells
+    double particle_mass_;             // Particle mass
+    fftw_complex* density_buffer_;     // Density buffer
+    fftw_complex* k_buffer_; // Transition area
+    fftw_complex* potential_buffer_;   // Potential energy buffer
+    double cell_width_; // Width of a cell, if applicable
 };
 
 #endif // SIMULATION_HPP

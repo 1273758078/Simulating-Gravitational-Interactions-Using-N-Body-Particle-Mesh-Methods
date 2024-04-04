@@ -11,38 +11,31 @@
 #include <string>
 #include <iostream>
 
-// Particle 类的实现
+// Implementation of the Particle class
 Particle::Particle(const std::array<double, 3>& position, const std::array<double, 3>& velocity)
     : position_(position), velocity_(velocity) {}
 
-// 获取粒子的位置
+// Get the position of the particle
 std::array<double, 3> Particle::getPosition() const {
     return position_;
 }
 
-// 获取粒子的速度
+// Get the velocity of the particle
 std::array<double, 3> Particle::getVelocity() const {
     return velocity_;
 }
 
-// 设置粒子的位置
+// Set the position of the particle
 void Particle::setPosition(const std::array<double, 3>& position) {
     position_ = position;
 }
 
-// 设置粒子的速度
+// Set the velocity of the particle
 void Particle::setVelocity(const std::array<double, 3>& velocity) {
     velocity_ = velocity;
 }
 
-// 根据加速度和时间步长更新粒子的位置和速度
-// void Particle::update(double delta_t, const std::array<double, 3>& acceleration) {
-//     for (int i = 0; i < 3; ++i) {
-//         velocity_[i] += acceleration[i] * delta_t;
-//         position_[i] += velocity_[i] * delta_t;
-//     }
-// }
-
+// Update the position and velocity of the particle based on acceleration and time step
 void Particle::update(double delta_t, const std::array<double, 3>& acceleration) {
     for (int i = 0; i < 3; ++i) {
         velocity_[i] += acceleration[i] * delta_t;
@@ -54,19 +47,18 @@ void Particle::update(double delta_t, const std::array<double, 3>& acceleration)
     }
 }
 
-
-// Simulation 类的实现
+// Implementation of the Simulation class
 Simulation::Simulation(double time_max, double delta_t, double box_width, double expansion_factor, int nc, double particle_mass)
     : time_max_(time_max), delta_t_(delta_t), box_width_(box_width), expansion_factor_(expansion_factor), nc_(nc), particle_mass_(particle_mass) {
-    // 分配内存给密度和势能缓冲区
+    // Allocate memory for the density and potential energy buffers
     density_buffer_ = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nc_ * nc_ * nc_);
     k_buffer_ = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nc_ * nc_ * nc_);
     potential_buffer_ = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nc_ * nc_ * nc_);
-    // 初始化密度缓冲区
+    // Initialize the density buffer
     initializeDensityBuffer();
 }
 
-// 析构函数，释放分配的内存
+// Destructor, free allocated memory
 Simulation::~Simulation() {
     if (density_buffer_ != nullptr) {
         fftw_free(density_buffer_);
@@ -79,32 +71,21 @@ Simulation::~Simulation() {
     }
 }
 
-// 向模拟中添加粒子
+// Add a particle to the simulation
 void Simulation::addParticle(const std::array<double, 3>& position) {
     particles_.emplace_back(position, std::array<double, 3>{0.0, 0.0, 0.0});
 }
 
-// 初始化粒子，根据给定的数量和种子，随机分布粒子
+// Initialize particles with a given number and seed, randomly distributing them
 void Simulation::initializeParticles(int num_particles, unsigned seed) {
     std::mt19937 gen(seed);
-    std::uniform_real_distribution<> dis(0.0, 1.0); // 确保粒子位置在箱子范围内box_width_
+    std::uniform_real_distribution<> dis(0.0, 1.0); // Ensure particle positions are within the box width
     for (int i = 0; i < num_particles; ++i) {
         addParticle({dis(gen), dis(gen), dis(gen)});
     }
-
-    // // 打印最多前五个粒子的位置
-    // for (size_t i = 0; i < particles_.size() && i < 5; i++) {
-    //     std::array<double, 3> pos = particles_[i].getPosition(); // 使用getPosition()获取位置
-    //     std::cout << "Particle " << i << ": (" 
-    //               << pos[0] << ", " // 使用正确的索引访问数组元素
-    //               << pos[1] << ", " 
-    //               << pos[2] << ")" << std::endl;
-    // }
-
-
 }
 
-// 运行模拟
+// Run the simulation
 void Simulation::run(const std::optional<std::string>& output_folder) {
     int steps = 0;
     int save_interval = 10;
@@ -112,25 +93,10 @@ void Simulation::run(const std::optional<std::string>& output_folder) {
         calculateDensity();
         calculatePotential();
         auto gradients = calculateGradient(potential_buffer_);
-        
-        
-        std::vector<std::array<double, 3>> positionss = getParticlesPositions();
-        // 打印前五个粒子的位置（如果它们存在）
-        for (size_t i = 0; i < positionss.size() && i < 5; ++i) {
-            std::cout << "Particle " << i << ": (" 
-                    << positionss[i][0] << ", " 
-                    << positionss[i][1] << ", " 
-                    << positionss[i][2] << ")" << std::endl;
-        }
-
-
-
-
-
         updateParticles(gradients, delta_t_);
         expandBox(expansion_factor_);
 
-        // 如果提供了输出文件夹并且当前步骤是保存间隔的倍数，则保存密度图像
+        // If an output folder is provided and the current step is a multiple of the save interval, save the density image
         if (output_folder && steps % save_interval == 0) {
             std::string filename = *output_folder + "/density_" + std::to_string(steps) + ".pbm";
             SaveToFile(density_buffer_, nc_, filename);
@@ -139,8 +105,7 @@ void Simulation::run(const std::optional<std::string>& output_folder) {
     }
 }
 
-
-// 初始化密度缓冲区
+// Initialize the density buffer
 void Simulation::initializeDensityBuffer() {
     for (int i = 0; i < nc_ * nc_ * nc_; ++i) {
         density_buffer_[i][0] = 0.0;
@@ -148,36 +113,19 @@ void Simulation::initializeDensityBuffer() {
     }
 }
 
-
-// 根据粒子的位置计算密度
-// void Simulation::calculateDensity() {
-//     initializeDensityBuffer();
-//     double cell_volume = std::pow(box_width_ / nc_, 3);
-//     for (const auto& particle : particles_) {
-//         std::array<double, 3> position = particle.getPosition();
-//         int i = static_cast<int>(position[0] * nc_ / box_width_);
-//         int j = static_cast<int>(position[1] * nc_ / box_width_);
-//         int k = static_cast<int>(position[2] * nc_ / box_width_);
-//         int index = (k + nc_ * (j + nc_ * i)) % (nc_ * nc_ * nc_);
-//         density_buffer_[index][0] += particle_mass_ / cell_volume;
-//     }
-// }
+// Calculate the density based on the positions of the particles
 void Simulation::calculateDensity() {
     initializeDensityBuffer();
     double cell_volume = std::pow(box_width_ / nc_, 3);
     for (const auto& particle : particles_) {
         std::array<double, 3> position = particle.getPosition();
 
-        // int i = static_cast<int>(position[0] * nc_);
-        // int j = static_cast<int>(position[1] * nc_);
-        // int k = static_cast<int>(position[2] * nc_);
-
-        // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
+        // Calculate the grid index for the particle's position, ensuring the index does not exceed the boundaries
         int i = std::min(static_cast<int>(position[0] * nc_), nc_ - 1);
         int j = std::min(static_cast<int>(position[1] * nc_), nc_ - 1);
         int k = std::min(static_cast<int>(position[2] * nc_), nc_ - 1);
 
-        // 确保索引不会为负
+        // Ensure the index is not negative
         i = std::max(i, 0);
         j = std::max(j, 0);
         k = std::max(k, 0);
@@ -187,7 +135,7 @@ void Simulation::calculateDensity() {
     }
 }
 
-// OpenMP版
+// Calculate the density based on the positions of the particles(OpenMP version)
 // void Simulation::calculateDensity() {
 //     initializeDensityBuffer();
 //     double cell_volume = std::pow(box_width_ / nc_, 3);
@@ -195,27 +143,31 @@ void Simulation::calculateDensity() {
 //     #pragma omp parallel for
 //     for (const auto& particle : particles_) {
 //         std::array<double, 3> position = particle.getPosition();
-//         int i = static_cast<int>(position[0] * nc_ / box_width_);
-//         int j = static_cast<int>(position[1] * nc_ / box_width_);
-//         int k = static_cast<int>(position[2] * nc_ / box_width_);
+
+//         // Calculate the grid index for the particle's position, ensuring the index does not exceed the boundaries
+//         int i = std::min(static_cast<int>(position[0] * nc_), nc_ - 1);
+//         int j = std::min(static_cast<int>(position[1] * nc_), nc_ - 1);
+//         int k = std::min(static_cast<int>(position[2] * nc_), nc_ - 1);
+
+//         // Ensure the index is not negative
+//         i = std::max(i, 0);
+//         j = std::max(j, 0);
+//         k = std::max(k, 0);
+
 //         int index = (k + nc_ * (j + nc_ * i)) % (nc_ * nc_ * nc_);
 //         density_buffer_[index][0] += particle_mass_ / cell_volume;
 //     }
 // }
 
-
-//得到某一个单元格的索引
+// Get the index of a particular cell
 int Simulation::getCellIndex(double x, double y, double z){
-    // int i = static_cast<int>(x * nc_);
-    // int j = static_cast<int>(y * nc_);
-    // int k = static_cast<int>(z * nc_);
 
-    // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
+    // Calculate the grid index for the particle's position, ensuring the index does not exceed the boundaries
     int i = std::min(static_cast<int>(x * nc_), nc_ - 1);
     int j = std::min(static_cast<int>(y * nc_), nc_ - 1);
     int k = std::min(static_cast<int>(z * nc_), nc_ - 1);
 
-    // 确保索引不会为负
+    // Ensure the index is not negative
     i = std::max(i, 0);
     j = std::max(j, 0);
     k = std::max(k, 0);
@@ -224,30 +176,30 @@ int Simulation::getCellIndex(double x, double y, double z){
     return index;
 }
 
-// 计算势能
+// Calculate potential energy
 // void Simulation::calculatePotential() {
-//     // 创建并执行正向FFT计划，将密度数据转换到频率空间
+//     // Create and execute the forward FFT plan, transforming density data to frequency space
 //     fftw_plan forward_plan = fftw_plan_dft_3d(nc_, nc_, nc_, density_buffer_, k_buffer_, FFTW_FORWARD, FFTW_MEASURE);
 //     fftw_execute(forward_plan);
-//     // 完成后立即释放FFT计划资源
+//     // Immediately release FFT plan resources after execution
 //     fftw_destroy_plan(forward_plan);
 
-//     // 在频率空间处理势能数据
+//     // Process potential energy data in frequency space
 //     for (int i = 0; i < nc_; ++i) {
 //         for (int j = 0; j < nc_; ++j) {
 //             for (int k = 0; k < nc_; ++k) {
 //                 int index = k + nc_ * (j + nc_ * i);
-//                 // 计算每个点的k向量
+//                 // Calculate the k-vector for each point
 //                 // std::array<double, 3> k_vec = getKVector(i, j, k);没用
-//                 // 计算k向量的平方
+//                 // Calculate the square of the k-vector
 //                 // double k_squared = k_vec[0] * k_vec[0] + k_vec[1] * k_vec[1] + k_vec[2] * k_vec[2];
 //                 double k_squared = (i * i + j * j + k * k) / (box_width_ * box_width_);
-//                 // 避免除以零
+//                 // Avoid dividing by zero
 //                 if (k_squared == 0) {
 //                     k_buffer_[index][0] = 0;
 //                     k_buffer_[index][1] = 0;
 //                 } else {
-//                     // 根据k向量的平方调整势能值
+//                     // Adjusting the potential energy value based on the square of the k-vector
 //                     double scaling_factor = -4 * M_PI / k_squared;
 //                     k_buffer_[index][0] *= scaling_factor;
 //                     k_buffer_[index][1] *= scaling_factor;
@@ -256,30 +208,30 @@ int Simulation::getCellIndex(double x, double y, double z){
 //         }
 //     }
 
-//     // 创建并执行逆向FFT计划，将势能数据从频率空间转换回实空间
+//     // Create and execute the inverse FFT plan, transforming potential energy data back to real space
 //     fftw_plan inverse_plan = fftw_plan_dft_3d(nc_, nc_, nc_, k_buffer_, potential_buffer_, FFTW_BACKWARD, FFTW_MEASURE);
 //     fftw_execute(inverse_plan);
-//     // 完成后立即释放FFT计划资源
+//     // Immediately release FFT plan resources after execution
 //     fftw_destroy_plan(inverse_plan);
 
-//     // 应用归一化因子，以确保逆FFT后的结果正确
+//     // Apply a normalization factor to ensure correct results after the inverse FFT
 //     double norm_factor = 1.0 / 8 * (nc_ * nc_ * nc_);
 //     for (int i = 0; i < nc_ * nc_ * nc_; ++i) {
 //         potential_buffer_[i][0] *= norm_factor;
-//         // 对于势能，我们只关心实部
+//         // For potential energy, we only care about the real part
 //         potential_buffer_[i][1] = 0;
 //     }
 // }
 
-// OpenMP版
+// Calculate potential energy(OpenMP version)
 void Simulation::calculatePotential() {
-    // 创建并执行正向FFT计划，将密度数据转换到频率空间
+    // Create and execute the forward FFT plan, transforming density data to frequency space
     fftw_plan forward_plan = fftw_plan_dft_3d(nc_, nc_, nc_, density_buffer_, k_buffer_, FFTW_FORWARD, FFTW_MEASURE);
     fftw_execute(forward_plan);
-    // 完成后立即释放FFT计划资源
+    // Immediately release FFT plan resources after execution
     fftw_destroy_plan(forward_plan);
 
-    // 在频率空间处理势能数据
+    // Process potential energy data in frequency space
     #pragma omp parallel for collapse(3)
     for (int i = 0; i < nc_; ++i) {
         for (int j = 0; j < nc_; ++j) {
@@ -298,30 +250,29 @@ void Simulation::calculatePotential() {
         }
     }
 
-    // 创建并执行逆向FFT计划，将势能数据从频率空间转换回实空间
+    // Create and execute the inverse FFT plan, transforming potential energy data back to real space
     fftw_plan inverse_plan = fftw_plan_dft_3d(nc_, nc_, nc_, k_buffer_, potential_buffer_, FFTW_BACKWARD, FFTW_MEASURE);
     fftw_execute(inverse_plan);
-    // 完成后立即释放FFT计划资源
+    // Immediately release FFT plan resources after execution
     fftw_destroy_plan(inverse_plan);
 
-    // 应用归一化因子，以确保逆FFT后的结果正确
+    // Apply a normalization factor to ensure correct results after the inverse FFT
     double norm_factor = 1.0 / (8 * (nc_ * nc_ * nc_));
     for (int i = 0; i < nc_ * nc_ * nc_; ++i) {
         potential_buffer_[i][0] *= norm_factor;
-        // 对于势能，我们只关心实部
+        // For potential energy, we only care about the real part
         potential_buffer_[i][1] = 0;
     }
 }
 
-
-// 在给定网格索引处获取势能值
+// Get the potential energy value at a given grid index
 double Simulation::getPotentialAtGridIndex(int i, int j, int k) {
     int index = k + nc_ * (j + nc_ * i);
-    // 注意：这里使用potential_buffer_来保存逆FFT后的结果
-    return potential_buffer_[index][0]; // 我们只关心实部
+    // Note: We use potential_buffer_ to store the results of the inverse FFT
+    return potential_buffer_[index][0]; // We are only interested in the real part
 }
 
-// 计算梯度
+// Calculate the gradient
 // std::vector<std::array<double, 3>> Simulation::calculateGradient(const fftw_complex* potential) {
 //     std::vector<std::array<double, 3>> gradient(nc_ * nc_ * nc_);
     
@@ -338,7 +289,7 @@ double Simulation::getPotentialAtGridIndex(int i, int j, int k) {
 //     return gradient;
 // }
 
-// OpenMP版
+// Calculate the gradient(OpenMP version)
 std::vector<std::array<double, 3>> Simulation::calculateGradient(const fftw_complex* potential) {
     std::vector<std::array<double, 3>> gradient(nc_ * nc_ * nc_);
     
@@ -356,95 +307,47 @@ std::vector<std::array<double, 3>> Simulation::calculateGradient(const fftw_comp
     return gradient;
 }
 
-
-// 将两个边界接在一起
+// Wrap two boundaries together
 int Simulation::wrapIndex(int index, int max) {
-    return (index + max) % max; // 模运算
+    return (index + max) % max; // Modular operation
 }
 
-// 更新粒子群状态
-// void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
-//     for (Particle& particle : particles_) {
-//         std::array<double, 3> pos = particle.getPosition();
-        
-//         // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
-//         int i = std::min(static_cast<int>(pos[0] * nc_ / box_width_), nc_ - 1);
-//         int j = std::min(static_cast<int>(pos[1] * nc_ / box_width_), nc_ - 1);
-//         int k = std::min(static_cast<int>(pos[2] * nc_ / box_width_), nc_ - 1);
-
-//         // 确保索引不会为负
-//         i = std::max(i, 0);
-//         j = std::max(j, 0);
-//         k = std::max(k, 0);
-
-//         // 获得格点上的加速度
-//         std::array<double, 3> acceleration = gradients[i * nc_ * nc_ + j * nc_ + k];
-
-//         // 更新粒子状态
-//         particle.update(delta_t, acceleration);
-//     }
-// }
-
-// void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
-//     for (Particle& particle : particles_) {
-//         std::array<double, 3> pos = particle.getPosition();
-        
-//         // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
-//         int i = std::min(static_cast<int>(pos[0] * nc_), nc_ - 1);
-//         int j = std::min(static_cast<int>(pos[1] * nc_), nc_ - 1);
-//         int k = std::min(static_cast<int>(pos[2] * nc_), nc_ - 1);
-
-//         // 确保索引不会为负
-//         i = std::max(i, 0);
-//         j = std::max(j, 0);
-//         k = std::max(k, 0);
-
-//         // 获得格点上的加速度
-//         std::array<double, 3> acceleration = gradients[i * nc_ * nc_ + j * nc_ + k];
-
-//         // 更新粒子状态
-//         particle.update(delta_t, acceleration);
-//     }
-// }
-
+// Update the state of the particle swarm
 void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
     for (Particle& particle : particles_) {
         std::array<double, 3> pos = particle.getPosition();
         
-        // 计算粒子位置所在的格点索引，同时确保索引不会超出边界
+        // Calculate the grid index for the particle's position, ensuring the index does not exceed the boundaries
         int i = std::min(static_cast<int>(pos[0] * nc_), nc_ - 1);
         int j = std::min(static_cast<int>(pos[1] * nc_), nc_ - 1);
         int k = std::min(static_cast<int>(pos[2] * nc_), nc_ - 1);
 
-        // 确保索引不会为负
+        // Ensure the index is not negative
         i = std::max(i, 0);
         j = std::max(j, 0);
         k = std::max(k, 0);
 
-        // 获得格点上的加速度
+        // Get the acceleration at the grid point
         std::array<double, 3> acceleration = gradients[i * nc_ * nc_ + j * nc_ + k];
 
-        // 更新粒子状态
+        // Update the particle state
         particle.update(delta_t, acceleration);
 
-        // 重新获取更新后的位置
+        // Re-obtain the updated position
         pos = particle.getPosition();
 
-        // 应用周期性边界条件
+        // Apply periodic boundary conditions
         for (int dim = 0; dim < 3; ++dim) {
-            if (pos[dim] < 0) pos[dim] += 1.0;  // 如果位置小于0，包裹到正侧
-            else if (pos[dim] >= 1.0) pos[dim] -= 1.0;  // 如果位置大于等于1，包裹回起始侧
+            if (pos[dim] < 0) pos[dim] += 1.0;  // If the position is less than 0, wrap to the positive side
+            else if (pos[dim] >= 1.0) pos[dim] -= 1.0;  // If the position is greater than or equal to 1, wrap back to the starting side
         }
 
-        // 用更新后的、考虑了周期性边界条件的位置更新粒子位置
+        // Update the particle position with the updated, boundary condition-considered position
         particle.setPosition(pos);
     }
 }
 
-
-
-
-// OpenMP版
+// Update the state of the particle swarm(OpenMP version)
 // void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradients, double delta_t) {
 //     #pragma omp parallel for
 //     for (size_t idx = 0; idx < particles_.size(); ++idx) {
@@ -463,17 +366,14 @@ void Simulation::updateParticles(const std::vector<std::array<double, 3>>& gradi
 //     }
 // }
 
-
-
-
 void Simulation::expandBox(double expansion_factor) {
-    // 放大盒子的宽度
+    // Enlarge the box width
     box_width_ *= expansion_factor;
     
-    // 如果有存储单元格宽度，也需要更新它
+    // If there's a stored cell width, it also needs to be updated
     cell_width_ = box_width_ / nc_;
     
-    // 缩小所有粒子的速度
+    // Reduce the velocity of all particles
     for (auto& particle : particles_) {
         std::array<double, 3> velocity = particle.getVelocity();
         velocity[0] /= expansion_factor;
@@ -483,48 +383,34 @@ void Simulation::expandBox(double expansion_factor) {
     }
 }
 
-// 得到单元格的总数
+// Get the total number of cells
 int Simulation::getTotalCells() const {
     return nc_ * nc_ * nc_;
 }
 
-// 得到密度函数的数据
+// Get the data of the density function
 fftw_complex* Simulation::getDensityBuffer() const {
     return density_buffer_;
 }
 
-// 得到粒子的质量
+// Get the mass of a particle
 double Simulation::getParticleMass() const {
     return particle_mass_;
 }
 
-// 得到单元格的体积
+// Get the volume of a cell
 double Simulation::getCellVolume() const {
-    // 假设你已经计算了单元格体积
+    // Assuming you've already calculated the cell volume
     return std::pow(box_width_ / nc_, 3);
 }
 
-// 提取所有粒子的位置，返回一个向量
+// Extract the positions of all particles, returning a vector
 std::vector<std::array<double, 3>> Simulation::getParticlesPositions() const {
     std::vector<std::array<double, 3>> positions;
-    positions.reserve(particles_.size()); // 预留足够的空间以避免多次内存分配
+    positions.reserve(particles_.size()); // Reserve sufficient space to avoid multiple memory allocations
 
     for (const auto& particle : particles_) {
-        positions.push_back(particle.getPosition());
-        // std::cout << "Particle " << ": (" 
-        //             << particle.getPosition()[0] << ", " // 使用正确的索引访问数组元素
-        //             << particle.getPosition()[1] << ", " 
-        //             << particle.getPosition()[2] << ")" << std::endl;    
+        positions.push_back(particle.getPosition());    
     }
-
-
-    // 打印前五个粒子的位置（如果它们存在）
-    // for (size_t i = 0; i < positions.size() && i < 5; ++i) {
-    //     std::cout << "Particle " << i << ": (" 
-    //             << positions[i][0] << ", " 
-    //             << positions[i][1] << ", " 
-    //             << positions[i][2] << ")" << std::endl;
-    // }
-
     return positions;
 }

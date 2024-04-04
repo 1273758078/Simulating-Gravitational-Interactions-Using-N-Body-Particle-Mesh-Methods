@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
     std::string output;
 
     
-    // 解析命令行参数
+    // Parsing command-line parameters
     if (argc == 2 && std::string(argv[1]) == "-h") {
         std::cout << "Help message and usage instructions" << std::endl;
         return 0;
@@ -44,16 +44,16 @@ int main(int argc, char* argv[])
         }
     }
 
-    // 根据提供的参数设置模拟
+    // Simulate based on the provided parameter settings
     int total_particles = nc * nc * nc * np_per_cell;
     double box_width = 100;
     double particle_mass = 1e5 / total_particles;
     
-    // 初始化模拟
+    // Initialize simulation
     Simulation sim(total_time, dt, box_width, expansion_factor, nc, particle_mass);
     sim.initializeParticles(total_particles, random_seed);
 
-    // 运行模拟，并每10个时间步长保存一次密度分布图像
+    // Run the simulation and save the density distribution image every 10 time steps
     sim.run(output_folder);
 
     return 0;
