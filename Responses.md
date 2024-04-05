@@ -109,4 +109,4 @@ updateParticles being extremely fast already means that parallelisation does not
 (3) Optimize the use of the logarithm function: When dealing with the logarithm's input value, if the value is zero, the code now opts to assign a minimal positive value before taking the logarithm. This approach avoids negative infinity results, which are not meaningful in the context of this calculation.
 
 6. command line arguments:
-mpirun -np 4 ./build/bin/NBody_Comparison Correlations 1.0 1.04 1000
+mpirun -np 4 ./build/bin/NBody_Comparison Correlations 1.0 1.04
