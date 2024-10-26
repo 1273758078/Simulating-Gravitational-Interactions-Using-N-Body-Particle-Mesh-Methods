@@ -17,10 +17,9 @@ This project simulates gravitational interactions between particles in an expand
 sudo apt-get install libfftw3-dev
 
 2. Clone the repository:
-git clone git@github.com:UCL-COMP0210-23-24/universe-in-a-box-1273758078.git COMP0210Assignment2
+git clone git@github.com:1273758078/Simulating-Gravitational-Interactions-Using-N-Body-Particle-Mesh-Methods.git
 
-3. Navigate to the project directory:
-cd COMP0210Assignment2
+3. Navigate to the project directory
 
 4. Build the project using CMake:
 cmake -B build
